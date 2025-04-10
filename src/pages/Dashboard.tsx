@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Link as LinkIcon, Save, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { generateRandomPath } from "@/lib/utils";
@@ -64,8 +64,8 @@ const Dashboard = () => {
         
         if (pageError) throw pageError;
         
-        setProfileData(profile);
-        setPageData(page);
+        setProfileData(profile as ProfileData);
+        setPageData(page as PageData);
       } catch (error) {
         console.error('Error fetching user data:', error);
         toast.error('Failed to load your profile data');
@@ -92,7 +92,7 @@ const Dashboard = () => {
       // Update profile
       const { error: profileError } = await supabase
         .from('profiles')
-        .update(profileData)
+        .update(profileData as ProfileData)
         .eq('id', user.id);
       
       if (profileError) throw profileError;
@@ -117,7 +117,7 @@ const Dashboard = () => {
           .single();
         
         if (fetchError) throw fetchError;
-        setPageData(newPage);
+        setPageData(newPage as PageData);
       }
       
       toast.success('Your profile has been updated successfully!');

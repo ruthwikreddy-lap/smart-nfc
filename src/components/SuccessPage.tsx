@@ -8,6 +8,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 
+interface PageData {
+  user_id: string;
+}
+
 const SuccessPage = () => {
   const { path } = useParams<{ path: string }>();
   const { toast } = useToast();
@@ -38,7 +42,7 @@ const SuccessPage = () => {
         }
         
         // Verify the page belongs to the logged in user
-        if (user && data.user_id !== user.id) {
+        if (user && (data as PageData).user_id !== user.id) {
           navigate('/dashboard');
           return;
         }

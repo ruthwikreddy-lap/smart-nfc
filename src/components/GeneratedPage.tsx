@@ -19,6 +19,10 @@ interface UserData {
   avatar: string;
 }
 
+interface PageData {
+  user_id: string;
+}
+
 const GeneratedPage = () => {
   const { path } = useParams<{ path: string }>();
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -51,7 +55,7 @@ const GeneratedPage = () => {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', pageData.user_id)
+          .eq('id', (pageData as PageData).user_id)
           .single();
         
         if (profileError || !profileData) {
@@ -60,7 +64,7 @@ const GeneratedPage = () => {
           return;
         }
         
-        setUserData(profileData);
+        setUserData(profileData as UserData);
       } catch (error) {
         console.error('Error fetching page data:', error);
         setNotFound(true);
