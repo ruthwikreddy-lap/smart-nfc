@@ -5,7 +5,8 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Twitter, Linkedin, Github, ArrowLeft } from "lucide-react";
+import { Mail, Twitter, Linkedin, Github, ArrowLeft, User } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UserData {
   name: string;
@@ -25,18 +26,50 @@ const GeneratedPage = () => {
   const [notFound, setNotFound] = useState(false);
   
   useEffect(() => {
-    if (path) {
-      // Load data from localStorage
-      const data = localStorage.getItem(`page-${path}`);
-      
-      if (data) {
-        setUserData(JSON.parse(data));
-      } else {
+    const fetchPageData = async () => {
+      if (!path) {
         setNotFound(true);
+        setLoading(false);
+        return;
       }
       
-      setLoading(false);
-    }
+      try {
+        // Get user_id from pages table using path
+        const { data: pageData, error: pageError } = await supabase
+          .from('pages')
+          .select('user_id')
+          .eq('path', path)
+          .single();
+        
+        if (pageError || !pageData) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+        
+        // Get profile data using user_id
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', pageData.user_id)
+          .single();
+        
+        if (profileError || !profileData) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+        
+        setUserData(profileData);
+      } catch (error) {
+        console.error('Error fetching page data:', error);
+        setNotFound(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPageData();
   }, [path]);
   
   if (loading) {
@@ -73,7 +106,7 @@ const GeneratedPage = () => {
       <CardHeader className="flex flex-col items-center text-center space-y-4 pb-6">
         <Avatar className="h-24 w-24">
           <AvatarImage src={userData?.avatar} alt={userData?.name} />
-          <AvatarFallback>{userData?.name.charAt(0)}</AvatarFallback>
+          <AvatarFallback>{userData?.name?.charAt(0) || <User className="h-12 w-12" />}</AvatarFallback>
         </Avatar>
         <div>
           <h1 className="text-3xl font-bold">{userData?.name}</h1>

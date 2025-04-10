@@ -1,17 +1,58 @@
 
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Copy, Eye } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 
 const SuccessPage = () => {
   const { path } = useParams<{ path: string }>();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   const fullUrl = `${window.location.origin}/${path}`;
+  
+  useEffect(() => {
+    const verifyPage = async () => {
+      if (!path) {
+        navigate('/');
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('pages')
+          .select('user_id')
+          .eq('path', path)
+          .single();
+        
+        if (error || !data) {
+          navigate('/');
+          return;
+        }
+        
+        // Verify the page belongs to the logged in user
+        if (user && data.user_id !== user.id) {
+          navigate('/dashboard');
+          return;
+        }
+        
+      } catch (error) {
+        console.error('Error verifying page:', error);
+        navigate('/');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    verifyPage();
+  }, [path, user, navigate]);
   
   useEffect(() => {
     if (copied) {
@@ -32,6 +73,14 @@ const SuccessPage = () => {
       className: "bg-black border border-[#007BFF]/30 text-white",
     });
   };
+  
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-pulse text-xl text-white">Loading...</div>
+      </div>
+    );
+  }
   
   return (
     <Card className="w-full max-w-md animate-fade-in bg-black border border-[#007BFF]/30 shadow-lg shadow-[#007BFF]/10">
@@ -71,7 +120,7 @@ const SuccessPage = () => {
           </Link>
         </Button>
         <Button variant="outline" asChild className="border-[#007BFF] text-[#007BFF] hover:bg-[#007BFF]/10 blue-glow">
-          <Link to="/">Create Another</Link>
+          <Link to="/dashboard">Go to Dashboard</Link>
         </Button>
       </CardFooter>
     </Card>
