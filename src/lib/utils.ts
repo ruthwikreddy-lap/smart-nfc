@@ -16,3 +16,8 @@ export function generateRandomPath(length: number): string {
   
   return result;
 }
+
+// New utility function to get shades of our blue
+export function getBlueShade(opacity: number = 1): string {
+  return `rgba(0, 123, 255, ${opacity})`;
+}
