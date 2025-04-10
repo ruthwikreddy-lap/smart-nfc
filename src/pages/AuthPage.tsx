@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -34,6 +35,27 @@ const AuthPage = () => {
       }
     } catch (error) {
       console.error("Authentication error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleTestLogin = async () => {
+    setIsSubmitting(true);
+    try {
+      await signIn("test@gmail.com", "test123");
+    } catch (error) {
+      console.error("Test login error:", error);
+      toast.error("Failed to log in with test account. Creating a test account first.");
+      
+      // Try to create the test account if it doesn't exist
+      try {
+        await signUp("test@gmail.com", "test123");
+        toast.success("Test account created. Please try logging in now.");
+      } catch (signupError) {
+        console.error("Test signup error:", signupError);
+        toast.error("Failed to create test account.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -102,6 +124,18 @@ const AuthPage = () => {
                 onClick={() => setIsLogin(!isLogin)}
               >
                 {isLogin ? "Need an account? Sign Up" : "Already have an account? Sign In"}
+              </Button>
+            </div>
+            
+            <div className="border-t pt-4 mt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full" 
+                onClick={handleTestLogin}
+                disabled={isSubmitting}
+              >
+                Use Test Account (test@gmail.com)
               </Button>
             </div>
           </form>
