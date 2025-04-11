@@ -31,6 +31,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/success/:path" element={<Success />} />
+            <Route path="/not-found" element={<NotFound />} />
             <Route path="/:path" element={<UserPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
