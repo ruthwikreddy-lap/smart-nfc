@@ -23,35 +23,40 @@ const UserPage = () => {
       }
 
       try {
-        // Try to fetch from Supabase first
-        const { data, error } = await supabase
+        // Try to fetch from Supabase first (this should work across all devices)
+        const { data, error: supabaseError } = await supabase
           .from('pages')
           .select('path, user_id')
           .eq('path', path)
           .maybeSingle();
 
-        if (error) {
-          console.error("Supabase error:", error);
+        if (supabaseError) {
+          console.error("Supabase error:", supabaseError);
         }
 
         // If found in Supabase, mark as valid
         if (data) {
+          console.log("Found path in Supabase:", data);
           setValidPath(true);
           setLoading(false);
           return;
+        } else {
+          console.log("Path not found in Supabase, checking localStorage");
         }
 
-        // If not found in Supabase, check localStorage
+        // If not found in Supabase, check localStorage (this only works on the original device)
         const localPageData = getPageByPath(path);
         
         if (localPageData) {
+          console.log("Found path in localStorage:", localPageData);
           setValidPath(true);
         } else {
-          // If path doesn't exist anywhere, show the 404 page
+          console.log("Path not found in localStorage either");
+          // If path doesn't exist anywhere, show the 404 page with helpful context
           navigate('/not-found', { 
             state: { 
               attemptedPath: path, 
-              message: "This profile may only be available from the device it was created on or may not exist." 
+              message: "This profile is only available from the device it was created on or if you're logged in with the same account." 
             } 
           });
           return;
@@ -61,6 +66,7 @@ const UserPage = () => {
       } catch (err) {
         console.error("Error validating path:", err);
         setLoading(false);
+        setError("Error checking profile");
       }
     };
 

@@ -41,7 +41,9 @@ const GeneratedPage = () => {
       }
       
       try {
-        // Try to get data from Supabase first
+        console.log("GeneratedPage: Fetching data for path:", path);
+        
+        // Try to get data from Supabase first (works across all devices)
         let pageData: PageData | null = null;
         let profileData: UserData | null = null;
         
@@ -54,6 +56,7 @@ const GeneratedPage = () => {
             .single();
           
           if (!pageError && supaPageData) {
+            console.log("GeneratedPage: Found page in Supabase:", supaPageData);
             pageData = supaPageData as PageData;
             
             // Get profile data using user_id
@@ -64,28 +67,41 @@ const GeneratedPage = () => {
               .single();
             
             if (!profileError && supaProfileData) {
+              console.log("GeneratedPage: Found profile in Supabase:", supaProfileData);
               profileData = supaProfileData as UserData;
+            } else {
+              console.log("GeneratedPage: Could not find profile in Supabase:", profileError);
             }
+          } else {
+            console.log("GeneratedPage: Could not find page in Supabase:", pageError);
           }
         } catch (supaError) {
-          console.log("Supabase error, falling back to localStorage");
+          console.error("Supabase error, falling back to localStorage:", supaError);
         }
         
-        // If Supabase data retrieval failed, try localStorage
+        // If Supabase data retrieval failed, try localStorage (only works on original device)
         if (!profileData) {
+          console.log("GeneratedPage: Trying localStorage for path:", path);
           const localPageData = getPageByPath(path);
           
           if (localPageData) {
+            console.log("GeneratedPage: Found page in localStorage:", localPageData);
             pageData = localPageData as PageData;
             const localProfileData = getProfile(localPageData.user_id);
             
             if (localProfileData) {
+              console.log("GeneratedPage: Found profile in localStorage:", localProfileData);
               profileData = localProfileData as UserData;
+            } else {
+              console.log("GeneratedPage: Could not find profile in localStorage for user_id:", localPageData.user_id);
             }
+          } else {
+            console.log("GeneratedPage: Could not find page in localStorage for path:", path);
           }
         }
         
         if (!profileData) {
+          console.log("GeneratedPage: No profile data found anywhere");
           setNotFound(true);
           setLoading(false);
           return;
