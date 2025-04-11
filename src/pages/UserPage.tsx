@@ -5,7 +5,8 @@ import GeneratedPage from "@/components/GeneratedPage";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { getPageByPath } from "@/lib/localStorageDB";
+import { getPageByPath, normalizePath } from "@/lib/localStorageDB";
+import { toast } from "sonner";
 
 const UserPage = () => {
   const { path } = useParams<{ path: string }>();
@@ -23,11 +24,15 @@ const UserPage = () => {
       }
 
       try {
+        console.log("Attempting to validate path:", path);
+        const normalizedPath = normalizePath(path);
+        console.log("Normalized path:", normalizedPath);
+        
         // Try to fetch from Supabase first (this should work across all devices)
         const { data, error: supabaseError } = await supabase
           .from('pages')
           .select('path, user_id')
-          .eq('path', path)
+          .eq('path', normalizedPath)
           .maybeSingle();
 
         if (supabaseError) {
@@ -45,28 +50,33 @@ const UserPage = () => {
         }
 
         // If not found in Supabase, check localStorage (this only works on the original device)
-        const localPageData = getPageByPath(path);
+        const localPageData = getPageByPath(normalizedPath);
         
         if (localPageData) {
           console.log("Found path in localStorage:", localPageData);
           setValidPath(true);
+          setLoading(false);
         } else {
           console.log("Path not found in localStorage either");
           // If path doesn't exist anywhere, show the 404 page with helpful context
+          toast.error("Profile not found", {
+            description: "This profile may not exist or is only available from the device it was created on."
+          });
           navigate('/not-found', { 
             state: { 
-              attemptedPath: path, 
+              attemptedPath: normalizedPath, 
               message: "This profile is only available from the device it was created on or if you're logged in with the same account." 
             } 
           });
           return;
         }
-
-        setLoading(false);
       } catch (err) {
         console.error("Error validating path:", err);
         setLoading(false);
         setError("Error checking profile");
+        toast.error("Error checking profile", {
+          description: "There was a problem accessing this profile."
+        });
       }
     };
 

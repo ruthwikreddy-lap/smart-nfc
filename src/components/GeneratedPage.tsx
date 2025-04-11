@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Twitter, Linkedin, Github, ArrowLeft, User, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { getPageByPath, getProfile } from "@/lib/localStorageDB";
+import { getPageByPath, getProfile, normalizePath } from "@/lib/localStorageDB";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "sonner";
 
 interface UserData {
   name: string;
@@ -41,7 +42,8 @@ const GeneratedPage = () => {
       }
       
       try {
-        console.log("GeneratedPage: Fetching data for path:", path);
+        const normalizedPath = normalizePath(path);
+        console.log("GeneratedPage: Fetching data for path:", normalizedPath);
         
         // Try to get data from Supabase first (works across all devices)
         let pageData: PageData | null = null;
@@ -52,7 +54,7 @@ const GeneratedPage = () => {
           const { data: supaPageData, error: pageError } = await supabase
             .from('pages')
             .select('user_id')
-            .eq('path', path)
+            .eq('path', normalizedPath)
             .single();
           
           if (!pageError && supaPageData) {
@@ -81,8 +83,8 @@ const GeneratedPage = () => {
         
         // If Supabase data retrieval failed, try localStorage (only works on original device)
         if (!profileData) {
-          console.log("GeneratedPage: Trying localStorage for path:", path);
-          const localPageData = getPageByPath(path);
+          console.log("GeneratedPage: Trying localStorage for path:", normalizedPath);
+          const localPageData = getPageByPath(normalizedPath);
           
           if (localPageData) {
             console.log("GeneratedPage: Found page in localStorage:", localPageData);
@@ -96,12 +98,13 @@ const GeneratedPage = () => {
               console.log("GeneratedPage: Could not find profile in localStorage for user_id:", localPageData.user_id);
             }
           } else {
-            console.log("GeneratedPage: Could not find page in localStorage for path:", path);
+            console.log("GeneratedPage: Could not find page in localStorage for path:", normalizedPath);
           }
         }
         
         if (!profileData) {
           console.log("GeneratedPage: No profile data found anywhere");
+          toast.error("Profile data not found");
           setNotFound(true);
           setLoading(false);
           return;
@@ -110,6 +113,7 @@ const GeneratedPage = () => {
         setUserData(profileData);
       } catch (error) {
         console.error('Error fetching page data:', error);
+        toast.error("Error loading profile");
         setNotFound(true);
       } finally {
         setLoading(false);

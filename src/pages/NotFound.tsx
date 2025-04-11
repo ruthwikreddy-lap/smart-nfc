@@ -2,7 +2,7 @@
 import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Home, LogIn } from "lucide-react";
+import { ArrowLeft, Home, LogIn, RefreshCw } from "lucide-react";
 
 const NotFound = () => {
   const location = useLocation();
@@ -32,7 +32,7 @@ const NotFound = () => {
         
         <div className="space-y-4">
           <p className="text-primary/80 text-sm mb-4">
-            To access profiles across devices, make sure you're logged in with the same account that created the profile.
+            <strong>Cross-Device Access:</strong> To access profiles across devices, make sure you're logged in with the same account that created the profile.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -51,15 +51,12 @@ const NotFound = () => {
             </Button>
             
             <Button 
-              asChild 
               variant="ghost" 
               className="w-full sm:w-auto text-gray-400"
-              onClick={() => window.history.back()}
+              onClick={() => window.location.reload()}
             >
-              <Link to="#">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Go Back
-              </Link>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Try Again
             </Button>
           </div>
         </div>

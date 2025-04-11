@@ -1,4 +1,3 @@
-
 // A robust utility to store page and profile data in localStorage for persistence
 
 // Store profile data
@@ -113,9 +112,10 @@ export const getPageByPath = (path: string) => {
 };
 
 // Helper to normalize paths for consistent lookup
-const normalizePath = (path: string): string => {
+export const normalizePath = (path: string): string => {
   if (!path) return "";
-  return path.trim().toLowerCase();
+  // Enhanced normalization: trim whitespace, lowercase, and remove any unwanted characters
+  return path.trim().toLowerCase().replace(/[^\w-]/g, '');
 };
 
 // Get all page paths
