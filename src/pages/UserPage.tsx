@@ -17,6 +17,7 @@ const UserPage = () => {
   
   // Track retrieval attempts to prevent infinite redirects
   const [retriesCount, setRetriesCount] = useState(0);
+  const maxRetries = 2;
 
   useEffect(() => {
     const validatePath = async () => {
@@ -81,6 +82,9 @@ const UserPage = () => {
                   console.error("Error uploading page to Supabase:", uploadError);
                 } else {
                   console.log("Successfully uploaded page to Supabase for cross-device access");
+                  toast.success("Your profile is now available on all devices", {
+                    description: "We've saved your profile to our cloud database"
+                  });
                 }
               } catch (uploadErr) {
                 console.error("Exception while uploading to Supabase:", uploadErr);
@@ -92,8 +96,8 @@ const UserPage = () => {
           } else {
             console.log("Path not found in localStorage either");
             
-            // If we've already retried once and still can't find the page, show 404
-            if (retriesCount > 0) {
+            // If we've reached max retries and still can't find the page, show 404
+            if (retriesCount >= maxRetries) {
               toast.error("Profile not found", {
                 description: "This profile doesn't exist or may not be accessible from this device."
               });
@@ -125,13 +129,13 @@ const UserPage = () => {
     };
 
     validatePath();
-  }, [path, navigate, retriesCount]);
+  }, [path, navigate, retriesCount, maxRetries]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-black to-gray-900">
         <div className="flex flex-col items-center">
-          <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin mb-4"></div>
+          <div className="w-12 h-12 rounded-full border-4 border-[#007BFF] border-t-transparent animate-spin mb-4"></div>
           <div className="animate-pulse text-white text-xl">Loading profile...</div>
           {retriesCount > 0 && (
             <p className="text-white/70 mt-4 text-sm text-center max-w-md">

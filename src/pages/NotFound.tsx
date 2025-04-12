@@ -20,8 +20,8 @@ const NotFound = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-black to-gray-900 p-4">
-      <div className="text-center bg-black/80 border border-primary/30 p-8 rounded-lg max-w-md w-full backdrop-blur-sm shadow-lg animate-fade-in">
-        <div className="text-6xl font-bold text-primary mb-4">404</div>
+      <div className="text-center bg-black/80 border border-[#007BFF]/30 p-8 rounded-lg max-w-md w-full backdrop-blur-sm shadow-lg animate-fade-in">
+        <div className="text-6xl font-bold text-[#007BFF] mb-4">404</div>
         <h1 className="text-2xl font-bold text-white mb-4">Page Not Found</h1>
         <p className="text-gray-400 mb-6">
           {state?.message || 
@@ -31,20 +31,20 @@ const NotFound = () => {
         </p>
         
         <div className="space-y-4">
-          <p className="text-primary/80 text-sm mb-4">
+          <p className="text-[#007BFF]/80 text-sm mb-4">
             <strong>Important:</strong> Profile pages are stored in our database for cross-device access. 
             If you've recently created this page, it may take a moment to propagate to all servers.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button asChild variant="default" className="w-full sm:w-auto blue-glow">
+            <Button asChild variant="default" className="w-full sm:w-auto blue-glow bg-[#007BFF] hover:bg-[#0066CC]">
               <Link to="/">
                 <Home className="mr-2 h-4 w-4" />
                 Go Home
               </Link>
             </Button>
             
-            <Button asChild variant="outline" className="w-full sm:w-auto border-primary/40 text-primary">
+            <Button asChild variant="outline" className="w-full sm:w-auto border-[#007BFF]/40 text-[#007BFF]">
               <Link to="/auth">
                 <LogIn className="mr-2 h-4 w-4" />
                 Sign In
