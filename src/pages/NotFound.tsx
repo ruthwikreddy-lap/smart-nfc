@@ -26,13 +26,14 @@ const NotFound = () => {
         <p className="text-gray-400 mb-6">
           {state?.message || 
             "The page you're looking for doesn't exist or may have been moved. " +
-            "If you're trying to access a user profile, it might be that the profile " +
-            "hasn't been created yet or is only available from the original device."}
+            "For shared profile pages, make sure you're accessing from the device where it was created, " +
+            "or sign in with the same account that created it."}
         </p>
         
         <div className="space-y-4">
           <p className="text-primary/80 text-sm mb-4">
-            <strong>Cross-Device Access:</strong> To access profiles across devices, make sure you're logged in with the same account that created the profile.
+            <strong>Important:</strong> Profile pages are stored in our database for cross-device access. 
+            If you've recently created this page, it may take a moment to propagate to all servers.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">

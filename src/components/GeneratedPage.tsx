@@ -31,6 +31,7 @@ const GeneratedPage = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const isMobile = useIsMobile();
   
   useEffect(() => {
@@ -48,6 +49,7 @@ const GeneratedPage = () => {
         // Try to get data from Supabase first (works across all devices)
         let pageData: PageData | null = null;
         let profileData: UserData | null = null;
+        let supabaseSuccess = false;
         
         try {
           // Get user_id from pages table using path
@@ -55,7 +57,7 @@ const GeneratedPage = () => {
             .from('pages')
             .select('user_id')
             .eq('path', normalizedPath)
-            .single();
+            .maybeSingle();
           
           if (!pageError && supaPageData) {
             console.log("GeneratedPage: Found page in Supabase:", supaPageData);
@@ -66,11 +68,12 @@ const GeneratedPage = () => {
               .from('profiles')
               .select('*')
               .eq('id', pageData.user_id)
-              .single();
+              .maybeSingle();
             
             if (!profileError && supaProfileData) {
               console.log("GeneratedPage: Found profile in Supabase:", supaProfileData);
               profileData = supaProfileData as UserData;
+              supabaseSuccess = true;
             } else {
               console.log("GeneratedPage: Could not find profile in Supabase:", profileError);
             }
@@ -82,7 +85,7 @@ const GeneratedPage = () => {
         }
         
         // If Supabase data retrieval failed, try localStorage (only works on original device)
-        if (!profileData) {
+        if (!supabaseSuccess) {
           console.log("GeneratedPage: Trying localStorage for path:", normalizedPath);
           const localPageData = getPageByPath(normalizedPath);
           
@@ -94,6 +97,42 @@ const GeneratedPage = () => {
             if (localProfileData) {
               console.log("GeneratedPage: Found profile in localStorage:", localProfileData);
               profileData = localProfileData as UserData;
+              
+              // Try to upload to Supabase for cross-device access if it's not there yet
+              if (retryCount === 0) {
+                try {
+                  // First upload the profile data
+                  const { error: profileUploadError } = await supabase
+                    .from('profiles')
+                    .upsert([{
+                      id: localPageData.user_id,
+                      ...localProfileData
+                    }]);
+                  
+                  if (profileUploadError) {
+                    console.error("Error uploading profile to Supabase:", profileUploadError);
+                  } else {
+                    console.log("Successfully uploaded profile to Supabase");
+                  }
+                  
+                  // Then upload the page data
+                  const { error: pageUploadError } = await supabase
+                    .from('pages')
+                    .upsert([{
+                      path: normalizedPath,
+                      user_id: localPageData.user_id,
+                      id: localPageData.id
+                    }]);
+                  
+                  if (pageUploadError) {
+                    console.error("Error uploading page to Supabase:", pageUploadError);
+                  } else {
+                    console.log("Successfully uploaded page to Supabase");
+                  }
+                } catch (uploadErr) {
+                  console.error("Exception while uploading to Supabase:", uploadErr);
+                }
+              }
             } else {
               console.log("GeneratedPage: Could not find profile in localStorage for user_id:", localPageData.user_id);
             }
@@ -104,24 +143,35 @@ const GeneratedPage = () => {
         
         if (!profileData) {
           console.log("GeneratedPage: No profile data found anywhere");
-          toast.error("Profile data not found");
-          setNotFound(true);
-          setLoading(false);
+          
+          // If we've already retried once, show not found
+          if (retryCount > 0) {
+            toast.error("Profile data not found");
+            setNotFound(true);
+            setLoading(false);
+            return;
+          }
+          
+          // Give Supabase another chance with a delay (data might be propagating)
+          setRetryCount(prev => prev + 1);
+          setTimeout(() => {
+            fetchPageData(); // Try again
+          }, 2000); // Wait 2 seconds before retrying
           return;
         }
         
         setUserData(profileData);
+        setLoading(false);
       } catch (error) {
         console.error('Error fetching page data:', error);
         toast.error("Error loading profile");
         setNotFound(true);
-      } finally {
         setLoading(false);
       }
     };
     
     fetchPageData();
-  }, [path]);
+  }, [path, retryCount]);
   
   if (loading) {
     return (
@@ -129,6 +179,12 @@ const GeneratedPage = () => {
         <div className="flex flex-col items-center">
           <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin mb-4"></div>
           <p className="text-xl font-medium animate-pulse">Loading profile...</p>
+          {retryCount > 0 && (
+            <p className="text-muted-foreground mt-4 text-sm text-center max-w-md">
+              Looking up profile data across our network...
+              <br />This may take a moment.
+            </p>
+          )}
         </div>
       </div>
     );
@@ -139,11 +195,11 @@ const GeneratedPage = () => {
       <div className="min-h-screen flex items-center justify-center p-4 bg-black">
         <Card className="w-full max-w-md mx-auto animate-fade-in text-center">
           <CardHeader className="pb-2">
-            <h1 className="text-2xl font-bold">Page Not Found</h1>
+            <h1 className="text-2xl font-bold">Profile Not Found</h1>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-6">
-              The profile you're looking for doesn't exist or has been removed.
+              The profile you're looking for doesn't exist or could not be accessed. If you created this profile, try accessing it from the device where it was created or sign in with the same account.
             </p>
             <Button asChild>
               <Link to="/">
