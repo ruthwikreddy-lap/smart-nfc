@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
-import { Upload, X, Check, AlertCircle } from "lucide-react";
+import { Upload, X, Check, AlertCircle, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -80,12 +80,13 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
     }
   }, [onImageUploaded, toast]);
   
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject } = useDropzone({
     onDrop,
     accept: {
       'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
     },
-    maxFiles: 1
+    maxFiles: 1,
+    multiple: false
   });
   
   const removeImage = () => {
@@ -103,29 +104,27 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
       )}
       
       {preview ? (
-        <div className="relative w-full rounded-lg overflow-hidden border-2 border-dashed border-border hover:border-primary/50 transition-colors">
+        <div className="relative w-full rounded-xl overflow-hidden border border-white/10 hover:border-[#007BFF]/50 transition-colors group">
           <img 
             src={preview} 
             alt="Preview" 
             className="w-full h-64 object-cover"
           />
-          <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={removeImage} size="sm">
-                <X className="mr-2 h-4 w-4" />
-                Remove
+          <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+            <Button variant="outline" onClick={removeImage} size="sm" className="border-white/20 text-white hover:bg-white/10">
+              <X className="mr-2 h-4 w-4" />
+              Remove
+            </Button>
+            <div {...getRootProps()}>
+              <input {...getInputProps()} />
+              <Button variant="outline" size="sm" disabled={uploading} className="border-white/20 text-white hover:bg-white/10">
+                <Upload className="mr-2 h-4 w-4" />
+                Change
               </Button>
-              <div {...getRootProps()}>
-                <input {...getInputProps()} />
-                <Button variant="outline" size="sm" disabled={uploading}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Change
-                </Button>
-              </div>
             </div>
           </div>
-          <div className="absolute top-2 right-2">
-            <div className="bg-black/60 text-white text-xs p-1 rounded">
+          <div className="absolute top-3 right-3">
+            <div className="bg-black/60 text-white text-xs p-1 rounded-full">
               <Check className="h-4 w-4 text-green-500" />
             </div>
           </div>
@@ -133,28 +132,49 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
       ) : (
         <div 
           {...getRootProps()} 
-          className={`w-full h-64 border-2 border-dashed rounded-lg flex flex-col items-center justify-center p-6 cursor-pointer transition-colors ${
-            isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+          className={`w-full h-64 border rounded-xl flex flex-col items-center justify-center p-6 cursor-pointer transition-all duration-300 ${
+            isDragActive ? 'scale-[1.02] shadow-lg' : ''
+          } ${
+            isDragAccept ? 'border-[#007BFF] bg-[#007BFF]/10' : 
+            isDragReject ? 'border-red-500 bg-red-500/10' : 
+            'border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10'
           }`}
         >
           <input {...getInputProps()} />
-          <Upload className={`h-12 w-12 mb-4 ${isDragActive ? 'text-primary animate-pulse' : 'text-muted-foreground'}`} />
-          <p className="text-center text-muted-foreground">
-            {isDragActive ? (
-              <span className="text-primary font-medium">Drop your image here</span>
+          
+          <div className={`mb-4 rounded-full p-4 ${
+            isDragActive ? 'bg-[#007BFF]/20' : 'bg-white/5'
+          }`}>
+            {isDragReject ? (
+              <X className="h-10 w-10 text-red-500" />
+            ) : isDragActive ? (
+              <Upload className="h-10 w-10 text-[#007BFF] animate-pulse" />
             ) : (
-              <>
-                <span className="font-medium">Click to upload</span> or drag and drop
-              </>
+              <ImageIcon className="h-10 w-10 text-white/60" />
             )}
-          </p>
-          <p className="text-xs text-muted-foreground mt-2">
-            PNG, JPG, GIF up to 5MB
-          </p>
+          </div>
+          
+          <div className="text-center space-y-2">
+            <p className="font-medium text-white">
+              {isDragReject ? (
+                "Unsupported file format"
+              ) : isDragActive ? (
+                "Drop your image here"
+              ) : (
+                <span>
+                  <span className="text-[#007BFF]">Click to upload</span> or drag and drop
+                </span>
+              )}
+            </p>
+            <p className="text-xs text-white/50">
+              PNG, JPG, GIF up to 5MB
+            </p>
+          </div>
+          
           {uploading && (
-            <div className="mt-4 flex items-center text-sm text-muted-foreground">
-              <div className="w-4 h-4 rounded-full border-2 border-t-primary border-r-primary border-b-transparent border-l-transparent animate-spin mr-2"></div>
-              Uploading...
+            <div className="mt-6 flex items-center justify-center">
+              <div className="w-5 h-5 rounded-full border-2 border-t-[#007BFF] border-r-[#007BFF] border-b-transparent border-l-transparent animate-spin mr-3"></div>
+              <span className="text-sm text-white/70">Uploading...</span>
             </div>
           )}
         </div>
