@@ -133,7 +133,7 @@ const UserPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-black to-gray-900">
+      <div className="min-h-screen flex items-center justify-center animated-bg">
         <div className="flex flex-col items-center">
           <div className="w-12 h-12 rounded-full border-4 border-[#007BFF] border-t-transparent animate-spin mb-4"></div>
           <div className="animate-pulse text-white text-xl">Loading profile...</div>
@@ -161,7 +161,7 @@ const UserPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 w-full">
+    <div className="min-h-screen bg-gradient-to-b from-black to-[#001a3a] w-full">
       {validPath && <GeneratedPage />}
     </div>
   );
