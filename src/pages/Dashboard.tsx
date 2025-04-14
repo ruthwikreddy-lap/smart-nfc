@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Link as LinkIcon, Save, User, Copy, CheckCircle } from "lucide-react";
+import { ArrowLeft, Link as LinkIcon, Save, User, Copy, CheckCircle, Mail, Twitter, Linkedin, Github } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
