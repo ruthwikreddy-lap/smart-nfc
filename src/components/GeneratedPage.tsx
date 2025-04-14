@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getPageByPath, normalizePath } from "@/lib/localStorageDB";
@@ -48,7 +47,6 @@ const ThemedProfile = () => {
       try {
         const normalizedPath = normalizePath(path);
         
-        // First try to fetch from Supabase
         const { data: pageData, error: pageError } = await supabase
           .from('pages')
           .select('user_id')
@@ -59,7 +57,6 @@ const ThemedProfile = () => {
           console.error("Error fetching page data:", pageError);
         }
         
-        // If we found a page in Supabase, fetch the associated profile
         if (pageData?.user_id) {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
@@ -76,7 +73,6 @@ const ThemedProfile = () => {
           }
         }
         
-        // Fallback to localStorage if no data found in Supabase
         const localData = getPageByPath(normalizedPath);
         if (localData) {
           setProfile(localData as unknown as ProfileData);
@@ -126,7 +122,6 @@ const ThemedProfile = () => {
     );
   }
 
-  // Dynamic theme classes
   const themeClasses = {
     container: theme === 'light' 
       ? 'bg-gray-50 text-gray-900' 
@@ -160,20 +155,17 @@ const ThemedProfile = () => {
         : 'bg-[#007BFF]/20 text-[#007BFF]'
   };
 
-  // Use current year for copyright
   const currentYear = new Date().getFullYear();
   const paragraphs = profile.bio?.split('\n') || [];
   
   return (
     <div className={`min-h-screen ${themeClasses.container} transition-colors duration-300`}>
-      {/* Theme switcher floating button */}
       <div className="fixed bottom-4 right-4 z-50">
         <div className={`rounded-full p-1 ${theme === 'light' ? 'bg-white shadow-md' : 'bg-black/40 backdrop-blur-sm'}`}>
           <ThemeSwitcher variant="minimal" />
         </div>
       </div>
 
-      {/* Background gradient effects */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {theme === 'dark' && (
           <>
@@ -189,16 +181,12 @@ const ThemedProfile = () => {
         )}
       </div>
       
-      {/* Header line */}
-      <div className={`fixed top-0 left-0 right-0 h-[1px] ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-gray-300 to-transparent' : theme === 'teal' ? 'bg-gradient-to-r from-transparent via-teal-500/30 to-transparent' : 'bg-gradient-to-r from-transparent via-white/20 to-transparent'} z-50`}></div>
+      <div className="fixed top-0 left-0 right-0 h-[1px] ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-gray-300 to-transparent' : theme === 'teal' ? 'bg-gradient-to-r from-transparent via-teal-500/30 to-transparent' : 'bg-gradient-to-r from-transparent via-white/20 to-transparent'} z-50`}></div>
       
       <div className="container mx-auto px-4 py-8 md:py-16 relative z-10 max-w-5xl">
-        {/* Profile Card - Mobile-first design */}
         <div className="rounded-2xl overflow-hidden mx-auto max-w-md md:max-w-none relative mb-8">
-          {/* Optional Cover Image - can be added later, placeholder for now */}
           <div className={`w-full h-32 md:h-48 ${theme === 'light' ? 'bg-gradient-to-r from-blue-50 to-indigo-100' : theme === 'teal' ? 'bg-gradient-to-r from-teal-800 to-teal-900' : 'bg-gradient-to-r from-gray-900 to-black'}`}>
             <div className="w-full h-full flex items-end justify-center">
-              {/* Avatar positioned to overlap the cover and content */}
               <div className="relative -mb-16 md:-mb-20">
                 <Avatar className="w-32 h-32 md:w-40 md:h-40 border-4 rounded-full animate-fade-in relative bg-black/10 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:shadow-xl shadow-lg" style={{ borderColor: theme === 'light' ? 'white' : theme === 'teal' ? '#134e4a' : '#111' }}>
                   <AvatarImage src={profile.avatar} alt={profile.name} className="object-cover" />
@@ -216,19 +204,15 @@ const ThemedProfile = () => {
             </div>
           </div>
           
-          {/* Profile Content */}
           <Card className={`mt-16 ${themeClasses.card}`}>
             <CardContent className="pt-8 pb-6 px-4 md:px-8 text-center">
-              {/* Name and Title */}
               <h1 className="text-3xl md:text-4xl font-bold mb-1">{profile.name}</h1>
               <p className={`text-lg ${theme === 'light' ? 'text-gray-600' : theme === 'teal' ? 'text-teal-200' : 'text-white/70'}`}>
                 {profile.title}
               </p>
               
-              {/* Divider */}
               <div className={`h-[1px] w-16 mx-auto my-4 ${theme === 'light' ? 'bg-gray-200' : theme === 'teal' ? 'bg-teal-600' : 'bg-white/20'}`}></div>
               
-              {/* Social Icons */}
               <div className="flex justify-center space-x-3 mt-4">
                 {profile.email && (
                   <Button variant="outline" size="icon" className={`rounded-full w-10 h-10 p-0 ${themeClasses.buttonOutline}`} asChild>
@@ -266,7 +250,6 @@ const ThemedProfile = () => {
           </Card>
         </div>
         
-        {/* Bio Section */}
         <Card className={`w-full rounded-xl overflow-hidden mb-8 ${themeClasses.card}`}>
           <CardContent className="p-6 md:p-8">
             <div className="flex items-start space-x-4">
@@ -285,7 +268,6 @@ const ThemedProfile = () => {
           </CardContent>
         </Card>
         
-        {/* Contact Section */}
         <div className="mb-8">
           <h2 className="text-xl font-bold mb-4 inline-flex items-center">
             <span>Connect With Me</span>
@@ -384,7 +366,6 @@ const ThemedProfile = () => {
           </div>
         </div>
         
-        {/* Action buttons */}
         <div className="flex flex-col sm:flex-row justify-center gap-3 mb-12 mt-8">
           <Button className={`${themeClasses.button} flex items-center justify-center py-6 px-8`}>
             <Save className="mr-2 h-5 w-5" />
@@ -397,7 +378,6 @@ const ThemedProfile = () => {
           </Button>
         </div>
         
-        {/* Footer */}
         <div className={`text-center border-t pt-8 ${theme === 'light' ? 'border-gray-200' : theme === 'teal' ? 'border-teal-800' : 'border-white/5'}`}>
           <p className={`text-sm font-mono tracking-wide ${theme === 'light' ? 'text-gray-500' : theme === 'teal' ? 'text-teal-300/50' : 'text-white/30'}`}>
             © {currentYear} · Created with PageGenerator

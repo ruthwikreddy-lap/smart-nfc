@@ -9,11 +9,17 @@ import { getPageByPath, normalizePath } from "@/lib/localStorageDB";
 import { toast } from "sonner";
 import { ThemeProvider } from "@/context/ThemeContext";
 
+interface ProfileWithTheme {
+  id: string;
+  preferred_theme?: string;
+}
+
 const UserPage = () => {
   const { path } = useParams<{ path: string }>();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [validPath, setValidPath] = useState(false);
+  const [preferredTheme, setPreferredTheme] = useState<"dark" | "light" | "teal">("dark");
   const navigate = useNavigate();
   
   // Track retrieval attempts to prevent infinite redirects
@@ -47,11 +53,28 @@ const UserPage = () => {
             console.error("Supabase error:", supabaseError);
           }
 
-          // If found in Supabase, mark as valid
+          // If found in Supabase, mark as valid and get the preferred theme
           if (data) {
             console.log("Found path in Supabase:", data);
             found = true;
             setValidPath(true);
+            
+            // Fetch preferred theme from profile
+            try {
+              const { data: profileData, error: profileError } = await supabase
+                .from('profiles')
+                .select('id, preferred_theme')
+                .eq('id', data.user_id)
+                .single();
+                
+              if (!profileError && profileData && profileData.preferred_theme) {
+                console.log("Found preferred theme:", profileData.preferred_theme);
+                setPreferredTheme(profileData.preferred_theme as "dark" | "light" | "teal");
+              }
+            } catch (profileErr) {
+              console.error("Error fetching profile theme:", profileErr);
+            }
+            
             setLoading(false);
           } else {
             console.log("Path not found in Supabase, will check localStorage");
@@ -164,7 +187,7 @@ const UserPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-[#001a3a] w-full">
       {validPath && (
-        <ThemeProvider>
+        <ThemeProvider initialTheme={preferredTheme}>
           <GeneratedPage />
         </ThemeProvider>
       )}

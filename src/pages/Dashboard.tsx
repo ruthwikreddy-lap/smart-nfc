@@ -1,12 +1,13 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Link as LinkIcon, Save, User, Copy, CheckCircle, Mail, Twitter, Linkedin, Github } from "lucide-react";
+import { ArrowLeft, Link as LinkIcon, Save, User, Copy, CheckCircle, Mail, Twitter, Linkedin, Github, Palette } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -15,6 +16,8 @@ import { Separator } from "@/components/ui/separator";
 import { generateRandomPath } from "@/lib/utils";
 import ImageUpload from "@/components/ImageUpload";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface ProfileData {
   id: string;
@@ -26,6 +29,7 @@ interface ProfileData {
   linkedin: string;
   github: string;
   avatar: string;
+  preferred_theme?: string;
 }
 
 interface PageData {
@@ -37,6 +41,7 @@ interface PageData {
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
+  const { theme, preferredTheme, setPreferredTheme } = useTheme();
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [pageData, setPageData] = useState<PageData | null>(null);
@@ -69,6 +74,11 @@ const Dashboard = () => {
         
         setProfileData(profile as ProfileData);
         setPageData(page as PageData);
+        
+        // Set the preferred theme from the profile data if available
+        if (profile?.preferred_theme) {
+          setPreferredTheme(profile.preferred_theme as "dark" | "light" | "teal");
+        }
       } catch (error) {
         console.error('Error fetching user data:', error);
         toast.error('Failed to load your profile data');
@@ -78,11 +88,16 @@ const Dashboard = () => {
     };
     
     fetchUserData();
-  }, [user]);
+  }, [user, setPreferredTheme]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setProfileData((prev) => prev ? ({ ...prev, [name]: value }) : null);
+  };
+
+  const handleThemeChange = (value: string) => {
+    setProfileData((prev) => prev ? ({ ...prev, preferred_theme: value }) : null);
+    setPreferredTheme(value as "dark" | "light" | "teal");
   };
 
   const handleImageUploaded = (url: string) => {
@@ -99,7 +114,10 @@ const Dashboard = () => {
       // Update profile
       const { error: profileError } = await supabase
         .from('profiles')
-        .update(profileData as ProfileData)
+        .update({
+          ...profileData,
+          preferred_theme: profileData.preferred_theme || preferredTheme
+        })
         .eq('id', user.id);
       
       if (profileError) throw profileError;
@@ -204,6 +222,40 @@ const Dashboard = () => {
                           onImageUploaded={handleImageUploaded}
                           currentImage={profileData?.avatar}
                         />
+                      </div>
+                      
+                      {/* Theme Preference Section */}
+                      <div className="space-y-4 p-4 rounded-lg border border-[#007BFF]/20 bg-black/30">
+                        <div className="flex items-center gap-2">
+                          <Palette className="w-5 h-5 text-[#007BFF]" />
+                          <Label className="text-lg font-medium">Default Theme for Visitors</Label>
+                        </div>
+                        <p className="text-sm text-white/70">
+                          Choose which theme visitors will see by default when viewing your profile
+                        </p>
+                        
+                        <RadioGroup 
+                          value={profileData?.preferred_theme || preferredTheme} 
+                          onValueChange={handleThemeChange}
+                          className="flex flex-wrap gap-3 pt-2"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="dark" id="theme-dark" className="border-[#007BFF]/50" />
+                            <Label htmlFor="theme-dark" className="cursor-pointer">Dark (Default)</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="light" id="theme-light" className="border-[#007BFF]/50" />
+                            <Label htmlFor="theme-light" className="cursor-pointer">Light</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="teal" id="theme-teal" className="border-[#007BFF]/50" />
+                            <Label htmlFor="theme-teal" className="cursor-pointer">Teal</Label>
+                          </div>
+                        </RadioGroup>
+                        
+                        <div className="mt-2 text-xs text-white/50">
+                          Note: Visitors can still change the theme when viewing your profile
+                        </div>
                       </div>
                       
                       <div className="space-y-2">
