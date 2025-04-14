@@ -2,7 +2,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { ArrowRight, User, Sparkles } from "lucide-react";
+import { ArrowRight, User, Sparkles, Palette } from "lucide-react";
 
 const Index = () => {
   const { user } = useAuth();
@@ -72,10 +72,10 @@ const Index = () => {
           
           <div className="p-6 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm">
             <div className="h-12 w-12 rounded-full bg-[#007BFF]/20 flex items-center justify-center mb-4">
-              <ArrowRight className="h-6 w-6 text-[#007BFF]" />
+              <Palette className="h-6 w-6 text-[#007BFF]" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">Shareable Link</h3>
-            <p className="text-white/70">Get a unique URL to share across your social media and professional networks</p>
+            <h3 className="text-xl font-semibold mb-2">Multiple Themes</h3>
+            <p className="text-white/70">Choose from dark, light, or teal themes to personalize your professional page</p>
           </div>
         </div>
       </div>

@@ -7,6 +7,7 @@ import { AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getPageByPath, normalizePath } from "@/lib/localStorageDB";
 import { toast } from "sonner";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const UserPage = () => {
   const { path } = useParams<{ path: string }>();
@@ -162,7 +163,11 @@ const UserPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-[#001a3a] w-full">
-      {validPath && <GeneratedPage />}
+      {validPath && (
+        <ThemeProvider>
+          <GeneratedPage />
+        </ThemeProvider>
+      )}
     </div>
   );
 };
