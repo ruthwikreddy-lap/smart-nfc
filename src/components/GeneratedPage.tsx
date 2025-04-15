@@ -37,6 +37,8 @@ const GeneratedPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -95,26 +97,46 @@ const GeneratedPage = () => {
   const handleSaveContact = () => {
     if (!profile) return;
     
-    saveContact(profile);
-    
-    toast.success("Contact saved", {
-      description: "The contact information has been downloaded as a vCard file."
-    });
+    try {
+      setIsSaving(true);
+      saveContact(profile);
+      
+      toast.success("Contact saved", {
+        description: "The contact information has been downloaded as a vCard file."
+      });
+    } catch (error) {
+      console.error("Error saving contact:", error);
+      toast.error("Error saving contact", {
+        description: "There was a problem downloading the contact information."
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleAddToNetwork = async () => {
     if (!profile) return;
     
-    const usedNative = await addToNetwork(profile);
-    
-    if (usedNative) {
-      toast.success("Contact added to your network", {
-        description: "The contact has been added to your device contacts."
+    try {
+      setIsAdding(true);
+      const usedNative = await addToNetwork(profile);
+      
+      if (usedNative) {
+        toast.success("Contact added to your network", {
+          description: "The contact has been added to your device contacts."
+        });
+      } else {
+        toast.success("Contact information downloaded", {
+          description: "Import the downloaded file to add this contact to your address book."
+        });
+      }
+    } catch (error) {
+      console.error("Error adding to network:", error);
+      toast.error("Error adding contact", {
+        description: "There was a problem adding this contact to your network."
       });
-    } else {
-      toast.success("Contact information downloaded", {
-        description: "Import the downloaded file to add this contact to your address book."
-      });
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -398,18 +420,20 @@ const GeneratedPage = () => {
           <Button 
             className={`${themeClasses.button} flex items-center justify-center py-6 px-8`}
             onClick={handleSaveContact}
+            disabled={isSaving}
           >
             <Save className="mr-2 h-5 w-5" />
-            Save Contact
+            {isSaving ? 'Saving...' : 'Save Contact'}
           </Button>
           
           <Button 
             variant="outline" 
             className={`${themeClasses.buttonOutline} flex items-center justify-center py-6 px-8`}
             onClick={handleAddToNetwork}
+            disabled={isAdding}
           >
             <Plus className="mr-2 h-5 w-5" />
-            Add to Network
+            {isAdding ? 'Adding...' : 'Add to Network'}
           </Button>
         </div>
         

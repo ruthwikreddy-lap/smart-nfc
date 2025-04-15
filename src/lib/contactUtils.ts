@@ -16,6 +16,7 @@ export const saveContact = (profile: {
   linkedin?: string;
   github?: string;
   avatar?: string;
+  location?: string;
 }): void => {
   // Create vCard content
   const vCardLines = [
@@ -25,6 +26,7 @@ export const saveContact = (profile: {
     profile.title ? `TITLE:${profile.title}` : '',
     profile.email ? `EMAIL:${profile.email}` : '',
     profile.phone ? `TEL:${profile.phone}` : '',
+    profile.location ? `ADR:;;${profile.location};;;` : '',
     profile.twitter ? `URL;type=Twitter:${profile.twitter.startsWith('http') ? profile.twitter : `https://twitter.com/${profile.twitter.replace('@', '')}`}` : '',
     profile.linkedin ? `URL;type=LinkedIn:${profile.linkedin.startsWith('http') ? profile.linkedin : `https://linkedin.com/in/${profile.linkedin}`}` : '',
     profile.github ? `URL;type=GitHub:${profile.github.startsWith('http') ? profile.github : `https://github.com/${profile.github}`}` : '',
@@ -47,6 +49,8 @@ export const saveContact = (profile: {
   // Clean up
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+  
+  console.log('Contact saved as vCard:', profile.name);
 };
 
 /**
@@ -63,14 +67,19 @@ export const addToNetwork = async (profile: {
   linkedin?: string;
   github?: string;
   avatar?: string;
+  location?: string;
 }): Promise<boolean> => {
+  console.log('Attempting to add contact to network:', profile.name);
+  
   // Check if the Contacts API is available (mainly on mobile)
-  if ('contacts' in navigator && 'ContactsManager' in window) {
+  if (hasNativeContactsSupport()) {
     try {
+      console.log('Native contacts API available, attempting to use it');
+      
       // @ts-ignore - The Contacts API is not fully typed in TypeScript
       const props = ['name', 'email', 'tel'];
       // @ts-ignore
-      const contact = await navigator.contacts.create();
+      const contact = new window.ContactsManager.Contact();
       
       // Set contact properties
       contact.name = [profile.name];
@@ -79,14 +88,17 @@ export const addToNetwork = async (profile: {
       
       // Save the contact
       await contact.save();
+      console.log('Contact saved using native Contacts API');
       return true;
     } catch (error) {
       console.error("Error using Contacts API:", error);
       // Fall back to vCard download
+      console.log('Falling back to vCard download');
       saveContact(profile);
       return false;
     }
   } else {
+    console.log('Native contacts API not available, using vCard download');
     // Fall back to vCard download on desktop or unsupported browsers
     saveContact(profile);
     return false;
@@ -97,5 +109,13 @@ export const addToNetwork = async (profile: {
  * Check if the contact functionality is available natively
  */
 export const hasNativeContactsSupport = (): boolean => {
-  return 'contacts' in navigator && 'ContactsManager' in window;
+  const hasContactsAPI = 'contacts' in navigator;
+  const hasContactsManager = 'ContactsManager' in window;
+  
+  console.log('Native contacts support check:', { 
+    hasContactsAPI, 
+    hasContactsManager
+  });
+  
+  return hasContactsAPI && hasContactsManager;
 };

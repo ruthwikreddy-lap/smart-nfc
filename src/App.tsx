@@ -1,6 +1,6 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "sonner";
+import { Toaster as UIToaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -20,8 +20,8 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <TooltipProvider>
-        <Toaster />
-        <SonnerToaster />
+        <UIToaster />
+        <SonnerToaster position="bottom-right" />
         <BrowserRouter>
           <AuthProvider>
             <Routes>
