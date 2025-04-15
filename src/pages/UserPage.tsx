@@ -67,9 +67,11 @@ const UserPage = () => {
                 .eq('id', data.user_id)
                 .single();
                 
-              if (!profileError && profileData && profileData.preferred_theme) {
+              if (!profileError && profileData) {
                 console.log("Found preferred theme:", profileData.preferred_theme);
-                setPreferredTheme(profileData.preferred_theme as "dark" | "light" | "teal");
+                if (profileData.preferred_theme) {
+                  setPreferredTheme(profileData.preferred_theme as "dark" | "light" | "teal");
+                }
               }
             } catch (profileErr) {
               console.error("Error fetching profile theme:", profileErr);

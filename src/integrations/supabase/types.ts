@@ -40,6 +40,7 @@ export type Database = {
           id: string
           linkedin: string | null
           name: string | null
+          preferred_theme: string | null
           title: string | null
           twitter: string | null
         }
@@ -52,6 +53,7 @@ export type Database = {
           id: string
           linkedin?: string | null
           name?: string | null
+          preferred_theme?: string | null
           title?: string | null
           twitter?: string | null
         }
@@ -64,6 +66,7 @@ export type Database = {
           id?: string
           linkedin?: string | null
           name?: string | null
+          preferred_theme?: string | null
           title?: string | null
           twitter?: string | null
         }
