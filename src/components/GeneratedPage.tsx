@@ -15,6 +15,8 @@ import ThemeSwitcher from "@/components/ThemeSwitcher";
 import ProfileHeader from "@/components/ProfileHeader";
 import ProfileBio from "@/components/ProfileBio";
 import ProfileSocials from "@/components/ProfileSocials";
+import { saveContact, addToNetwork, hasNativeContactsSupport } from "@/lib/contactUtils";
+import { toast } from "sonner";
 
 interface ProfileData {
   name: string;
@@ -89,6 +91,32 @@ const GeneratedPage = () => {
 
     fetchProfileData();
   }, [path]);
+
+  const handleSaveContact = () => {
+    if (!profile) return;
+    
+    saveContact(profile);
+    
+    toast.success("Contact saved", {
+      description: "The contact information has been downloaded as a vCard file."
+    });
+  };
+
+  const handleAddToNetwork = async () => {
+    if (!profile) return;
+    
+    const usedNative = await addToNetwork(profile);
+    
+    if (usedNative) {
+      toast.success("Contact added to your network", {
+        description: "The contact has been added to your device contacts."
+      });
+    } else {
+      toast.success("Contact information downloaded", {
+        description: "Import the downloaded file to add this contact to your address book."
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -367,12 +395,19 @@ const GeneratedPage = () => {
         </div>
         
         <div className="flex flex-col sm:flex-row justify-center gap-3 mb-12 mt-8">
-          <Button className={`${themeClasses.button} flex items-center justify-center py-6 px-8`}>
+          <Button 
+            className={`${themeClasses.button} flex items-center justify-center py-6 px-8`}
+            onClick={handleSaveContact}
+          >
             <Save className="mr-2 h-5 w-5" />
             Save Contact
           </Button>
           
-          <Button variant="outline" className={`${themeClasses.buttonOutline} flex items-center justify-center py-6 px-8`}>
+          <Button 
+            variant="outline" 
+            className={`${themeClasses.buttonOutline} flex items-center justify-center py-6 px-8`}
+            onClick={handleAddToNetwork}
+          >
             <Plus className="mr-2 h-5 w-5" />
             Add to Network
           </Button>
