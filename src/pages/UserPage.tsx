@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import GeneratedPage from "@/components/GeneratedPage";
@@ -7,7 +6,7 @@ import { AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getPageByPath, normalizePath } from "@/lib/localStorageDB";
 import { toast } from "sonner";
-import { ThemeProvider } from "@/context/ThemeContext";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 
 interface ProfileWithTheme {
   id: string;
@@ -188,11 +187,7 @@ const UserPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-[#001a3a] w-full">
-      {validPath && (
-        <ThemeProvider initialTheme={preferredTheme}>
-          <GeneratedPage />
-        </ThemeProvider>
-      )}
+      {validPath && <GeneratedPage />}
     </div>
   );
 };

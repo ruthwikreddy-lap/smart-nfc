@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getPageByPath, normalizePath } from "@/lib/localStorageDB";
@@ -11,7 +10,7 @@ import {
   Save, Plus, MapPin 
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { ThemeProvider, useTheme } from "@/context/ThemeContext";
+import { useTheme } from "@/context/ThemeContext";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import ProfileHeader from "@/components/ProfileHeader";
 import ProfileBio from "@/components/ProfileBio";
@@ -30,7 +29,7 @@ interface ProfileData {
   location?: string;
 }
 
-const ThemedProfile = () => {
+const GeneratedPage = () => {
   const { path } = useParams<{ path: string }>();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -157,7 +156,7 @@ const ThemedProfile = () => {
   };
 
   const currentYear = new Date().getFullYear();
-  const paragraphs = profile.bio?.split('\n') || [];
+  const paragraphs = profile?.bio?.split('\n') || [];
   
   return (
     <div className={`min-h-screen ${themeClasses.container} transition-colors duration-300`}>
@@ -386,14 +385,6 @@ const ThemedProfile = () => {
         </div>
       </div>
     </div>
-  );
-};
-
-const GeneratedPage = () => {
-  return (
-    <ThemeProvider>
-      <ThemedProfile />
-    </ThemeProvider>
   );
 };
 
