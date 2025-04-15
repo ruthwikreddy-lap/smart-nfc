@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getPageByPath, normalizePath } from "@/lib/localStorageDB";
@@ -181,7 +182,7 @@ const ThemedProfile = () => {
         )}
       </div>
       
-      <div className="fixed top-0 left-0 right-0 h-[1px] ${theme === 'light' ? 'bg-gradient-to-r from-transparent via-gray-300 to-transparent' : theme === 'teal' ? 'bg-gradient-to-r from-transparent via-teal-500/30 to-transparent' : 'bg-gradient-to-r from-transparent via-white/20 to-transparent'} z-50`}></div>
+      <div className="fixed top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent z-50"></div>
       
       <div className="container mx-auto px-4 py-8 md:py-16 relative z-10 max-w-5xl">
         <div className="rounded-2xl overflow-hidden mx-auto max-w-md md:max-w-none relative mb-8">
