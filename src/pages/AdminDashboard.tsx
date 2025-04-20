@@ -82,7 +82,8 @@ const AdminDashboard = () => {
       
       const { data: codeData, error: codeError } = await supabase
         .from('access_codes')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
       
       if (codeError) throw codeError;
       setAccessCodes(codeData || []);
@@ -140,32 +141,49 @@ const AdminDashboard = () => {
     
     setProcessing(true);
     try {
-      toast.success("Processing Excel file...");
-      
-      for (let i = 0; i < 3; i++) {
-        const randomPath = generateRandomPath(10);
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData: ExcelPortfolioData[] = XLSX.utils.sheet_to_json(firstSheet);
+
+        for (const row of jsonData) {
+          const randomPath = generateRandomPath(10);
+          
+          try {
+            await supabase
+              .from('pages')
+              .insert({
+                path: randomPath,
+                user_id: user?.id
+              });
+              
+            await supabase
+              .from('profiles')
+              .insert({
+                id: randomPath,
+                name: row.name,
+                title: row.title,
+                bio: row.bio,
+                email: row.email,
+                twitter: row.twitter,
+                linkedin: row.linkedin,
+                github: row.github
+              });
+              
+            toast.success(`Created portfolio for ${row.name}`);
+          } catch (error) {
+            console.error(`Error creating portfolio for ${row.name}:`, error);
+            toast.error(`Failed to create portfolio for ${row.name}`);
+          }
+        }
         
-        await supabase
-          .from('pages')
-          .insert({
-            path: randomPath,
-            user_id: user?.id
-          });
-          
-        await supabase
-          .from('profiles')
-          .insert({
-            id: user?.id,
-            name: `Sample User ${i+1}`,
-            title: `Sample Title ${i+1}`,
-            bio: `This is a sample bio for user ${i+1} generated from Excel data.`
-          });
-          
-        toast.success(`Created portfolio ${i+1} of 3`);
-      }
+        toast.success(`Successfully processed ${jsonData.length} portfolios`);
+        fetchData();
+      };
       
-      toast.success("Successfully created 3 portfolios from Excel data");
-      fetchData();
+      reader.readAsArrayBuffer(excelFile);
     } catch (error) {
       console.error("Error processing Excel file:", error);
       toast.error("Failed to process Excel file");
