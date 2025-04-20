@@ -18,6 +18,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const ADMIN_EMAIL = "akkenapally.reddy@gmail.com";
+const ADMIN_PASSWORD = "Akkenapally20!";
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -67,6 +68,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      
+      // Special handling for admin account
+      if (email === ADMIN_EMAIL && password !== ADMIN_PASSWORD) {
+        throw new Error("Incorrect admin password");
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
