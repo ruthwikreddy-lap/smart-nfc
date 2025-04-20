@@ -1,11 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -13,27 +11,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { UploadCloud, Users, Key, FileSpreadsheet, Download, Plus } from "lucide-react";
 import { generateAccessCode } from "@/lib/accessCodeUtils";
 import { generateRandomPath } from "@/lib/utils";
+import { UserData, AccessCodeData, PageData, ExcelPortfolioData } from "@/lib/types";
+import * as XLSX from 'xlsx';
 
-interface UserData {
-  id: string;
-  email: string;
-  created_at: string;
-}
-
-interface PageData {
-  id: string;
-  path: string;
-  user_id?: string;
-  created_at: string;
-  user_email?: string;
-}
-
-interface AccessCodeData {
-  id: string;
-  code: string;
-  used: boolean;
-  created_at: string;
-}
+const sampleExcelData: ExcelPortfolioData[] = [
+  {
+    name: "John Doe",
+    title: "Software Engineer",
+    bio: "Passionate about building great software",
+    email: "john@example.com",
+    twitter: "johndoe",
+    linkedin: "https://linkedin.com/in/johndoe",
+    github: "https://github.com/johndoe"
+  }
+];
 
 const AdminDashboard = () => {
   const { user, isAdmin } = useAuth();
@@ -47,7 +38,6 @@ const AdminDashboard = () => {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    // Redirect non-admin users
     if (!isAdmin && !loading) {
       navigate("/dashboard");
       toast.error("You don't have permission to access this page");
@@ -59,57 +49,44 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch users
-      const { data: userData, error: userError } = await supabase
-        .from('auth.users')
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
         .select('id, email, created_at');
       
-      if (userError) throw userError;
+      if (profileError) throw profileError;
+      setUsers(profileData as UserData[] || []);
       
-      // Fetch pages
       const { data: pageData, error: pageError } = await supabase
         .from('pages')
         .select('*');
       
       if (pageError) throw pageError;
       
-      // Fetch access codes (this would be a new table you'd need to create)
-      const { data: codeData, error: codeError } = await supabase
-        .from('access_codes')
-        .select('*');
-      
-      if (codeError) {
-        console.error("Error fetching access codes:", codeError);
-        // Provide mock data since the table might not exist yet
-        setAccessCodes([{
-          id: "1",
-          code: generateAccessCode(),
-          used: false,
-          created_at: new Date().toISOString()
-        }]);
-      } else {
-        setAccessCodes(codeData || []);
-      }
-      
-      // Enhance page data with user email
       const enhancedPageData = await Promise.all((pageData || []).map(async (page) => {
         if (page.user_id) {
-          const { data: user } = await supabase
-            .from('auth.users')
+          const { data: profile } = await supabase
+            .from('profiles')
             .select('email')
             .eq('id', page.user_id)
             .single();
           
           return {
             ...page,
-            user_email: user?.email || 'Unknown'
+            user_email: profile?.email || 'Unknown'
           };
         }
         return page;
       }));
       
-      setUsers(userData || []);
       setPages(enhancedPageData);
+      
+      const { data: codeData, error: codeError } = await supabase
+        .from('access_codes')
+        .select('*');
+      
+      if (codeError) throw codeError;
+      setAccessCodes(codeData || []);
+      
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Failed to load admin data");
@@ -121,9 +98,8 @@ const AdminDashboard = () => {
   const generateNewAccessCode = async () => {
     setGeneratingCode(true);
     try {
-      const newCode = generateAccessCode(Date.now()); // Use current timestamp as seed for unique codes
+      const newCode = generateAccessCode();
       
-      // Insert the new code into the database (you'll need to create this table)
       const { error } = await supabase
         .from('access_codes')
         .insert({
@@ -134,13 +110,20 @@ const AdminDashboard = () => {
       if (error) throw error;
       
       toast.success("New access code generated");
-      fetchData(); // Refresh the data
+      fetchData();
     } catch (error) {
       console.error("Error generating access code:", error);
       toast.error("Failed to generate access code");
     } finally {
       setGeneratingCode(false);
     }
+  };
+
+  const downloadExcelTemplate = () => {
+    const ws = XLSX.utils.json_to_sheet(sampleExcelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "portfolio_template.xlsx");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,16 +140,11 @@ const AdminDashboard = () => {
     
     setProcessing(true);
     try {
-      // Here we would parse the Excel file and create portfolio pages
-      // This is a simplified mock implementation
-      
       toast.success("Processing Excel file...");
       
-      // Mock creating 3 pages
       for (let i = 0; i < 3; i++) {
         const randomPath = generateRandomPath(10);
         
-        // Create a page for each row in the Excel file
         await supabase
           .from('pages')
           .insert({
@@ -174,7 +152,6 @@ const AdminDashboard = () => {
             user_id: user?.id
           });
           
-        // Create a profile for each page
         await supabase
           .from('profiles')
           .insert({
@@ -188,7 +165,7 @@ const AdminDashboard = () => {
       }
       
       toast.success("Successfully created 3 portfolios from Excel data");
-      fetchData(); // Refresh the data
+      fetchData();
     } catch (error) {
       console.error("Error processing Excel file:", error);
       toast.error("Failed to process Excel file");
