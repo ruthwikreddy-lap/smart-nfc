@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { verifyAccessCode } from "@/lib/accessCodeUtils";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 interface AccessCodeVerificationProps {
   onVerified: () => void;
@@ -14,6 +15,17 @@ interface AccessCodeVerificationProps {
 const AccessCodeVerification = ({ onVerified }: AccessCodeVerificationProps) => {
   const [accessCode, setAccessCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isAdmin } = useAuth();
+
+  // Skip verification for admin user
+  if (isAdmin) {
+    // Auto-verify for admin
+    setTimeout(() => {
+      onVerified();
+    }, 0);
+    
+    return null;
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

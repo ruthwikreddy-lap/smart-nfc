@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -40,7 +39,7 @@ interface PageData {
 }
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const { theme, preferredTheme, setPreferredTheme } = useTheme();
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
@@ -54,7 +53,6 @@ const Dashboard = () => {
       if (!user) return;
       
       try {
-        // Fetch profile data
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -63,7 +61,6 @@ const Dashboard = () => {
         
         if (profileError) throw profileError;
         
-        // Fetch page data
         const { data: page, error: pageError } = await supabase
           .from('pages')
           .select('*')
@@ -75,7 +72,6 @@ const Dashboard = () => {
         setProfileData(profile as ProfileData);
         setPageData(page as PageData);
         
-        // Set the preferred theme from the profile data if available
         if (profile?.preferred_theme) {
           setPreferredTheme(profile.preferred_theme as "dark" | "light" | "teal");
         }
@@ -111,7 +107,6 @@ const Dashboard = () => {
     setIsSubmitting(true);
     
     try {
-      // Update profile
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -122,7 +117,6 @@ const Dashboard = () => {
       
       if (profileError) throw profileError;
       
-      // Create page if doesn't exist
       if (!pageData) {
         const randomPath = generateRandomPath(10);
         const { error: pageError } = await supabase
@@ -134,7 +128,6 @@ const Dashboard = () => {
         
         if (pageError) throw pageError;
         
-        // Fetch the newly created page
         const { data: newPage, error: fetchError } = await supabase
           .from('pages')
           .select('*')
@@ -183,6 +176,13 @@ const Dashboard = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <h1 className="text-3xl font-bold gradient-heading">My Dashboard</h1>
           <div className="flex gap-4">
+            {isAdmin && (
+              <Button variant="outline" asChild className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30">
+                <Link to="/admin">
+                  Admin Panel
+                </Link>
+              </Button>
+            )}
             {pageData && (
               <Button variant="outline" asChild className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30">
                 <Link to={`/${pageData.path}`}>
@@ -224,7 +224,6 @@ const Dashboard = () => {
                         />
                       </div>
                       
-                      {/* Theme Preference Section */}
                       <div className="space-y-4 p-4 rounded-lg border border-[#007BFF]/20 bg-black/30">
                         <div className="flex items-center gap-2">
                           <Palette className="w-5 h-5 text-[#007BFF]" />
