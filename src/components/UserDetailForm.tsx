@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { generateRandomPath } from "@/lib/utils";
+import AccessCodeVerification from "./AccessCodeVerification";
 
 interface FormData {
   name: string;
@@ -23,6 +23,7 @@ interface FormData {
 const UserDetailForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isVerified, setIsVerified] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     title: "",
@@ -58,6 +59,10 @@ const UserDetailForm = () => {
     // Redirect to success page with the path
     navigate(`/success/${randomPath}`);
   };
+
+  if (!isVerified) {
+    return <AccessCodeVerification onVerified={() => setIsVerified(true)} />;
+  }
 
   return (
     <Card className="w-full max-w-md animate-fade-in">
