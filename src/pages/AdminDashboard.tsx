@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -11,20 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { UploadCloud, Users, Key, FileSpreadsheet, Download, Plus } from "lucide-react";
 import { generateAccessCode } from "@/lib/accessCodeUtils";
 import { generateRandomPath } from "@/lib/utils";
-import { UserData, AccessCodeData, PageData, ExcelPortfolioData } from "@/lib/types";
+import { UserData, AccessCodeData, PageData } from "@/lib/types";
+import { downloadExcelTemplate, validateExcelData } from "@/utils/excelUtils";
 import * as XLSX from 'xlsx';
-
-const sampleExcelData: ExcelPortfolioData[] = [
-  {
-    name: "John Doe",
-    title: "Software Engineer",
-    bio: "Passionate about building great software",
-    email: "john@example.com",
-    twitter: "johndoe",
-    linkedin: "https://linkedin.com/in/johndoe",
-    github: "https://github.com/johndoe"
-  }
-];
 
 const AdminDashboard = () => {
   const { user, isAdmin } = useAuth();
@@ -49,6 +39,7 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Fetch users data from profiles table
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, email, created_at');
@@ -56,12 +47,14 @@ const AdminDashboard = () => {
       if (profileError) throw profileError;
       setUsers(profileData as UserData[] || []);
       
+      // Fetch pages data
       const { data: pageData, error: pageError } = await supabase
         .from('pages')
         .select('*');
       
       if (pageError) throw pageError;
       
+      // Enhance page data with user email
       const enhancedPageData = await Promise.all((pageData || []).map(async (page) => {
         if (page.user_id) {
           const { data: profile } = await supabase
@@ -78,15 +71,16 @@ const AdminDashboard = () => {
         return page;
       }));
       
-      setPages(enhancedPageData);
+      setPages(enhancedPageData as PageData[]);
       
+      // Fetch access codes
       const { data: codeData, error: codeError } = await supabase
         .from('access_codes')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (codeError) throw codeError;
-      setAccessCodes(codeData || []);
+      setAccessCodes(codeData as AccessCodeData[] || []);
       
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -120,13 +114,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const downloadExcelTemplate = () => {
-    const ws = XLSX.utils.json_to_sheet(sampleExcelData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, "portfolio_template.xlsx");
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setExcelFile(e.target.files[0]);
@@ -146,41 +133,66 @@ const AdminDashboard = () => {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData: ExcelPortfolioData[] = XLSX.utils.sheet_to_json(firstSheet);
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+        
+        // Validate the data
+        const validation = validateExcelData(jsonData);
+        if (!validation.valid) {
+          toast.error(`Excel validation failed: ${validation.errors.join(', ')}`);
+          setProcessing(false);
+          return;
+        }
+        
+        let successCount = 0;
+        let errorCount = 0;
 
         for (const row of jsonData) {
           const randomPath = generateRandomPath(10);
           
           try {
-            await supabase
+            // Create page entry
+            const { error: pageError } = await supabase
               .from('pages')
               .insert({
                 path: randomPath,
                 user_id: user?.id
               });
               
-            await supabase
+            if (pageError) throw pageError;
+              
+            // Create profile entry  
+            const { error: profileError } = await supabase
               .from('profiles')
               .insert({
                 id: randomPath,
                 name: row.name,
                 title: row.title,
                 bio: row.bio,
-                email: row.email,
-                twitter: row.twitter,
-                linkedin: row.linkedin,
-                github: row.github
+                email: row.email || null,
+                twitter: row.twitter || null,
+                linkedin: row.linkedin || null,
+                github: row.github || null
               });
               
-            toast.success(`Created portfolio for ${row.name}`);
+            if (profileError) throw profileError;
+              
+            successCount++;
           } catch (error) {
             console.error(`Error creating portfolio for ${row.name}:`, error);
-            toast.error(`Failed to create portfolio for ${row.name}`);
+            errorCount++;
           }
         }
         
-        toast.success(`Successfully processed ${jsonData.length} portfolios`);
+        if (successCount > 0) {
+          toast.success(`Successfully created ${successCount} portfolios`);
+        }
+        
+        if (errorCount > 0) {
+          toast.error(`Failed to create ${errorCount} portfolios`);
+        }
+        
         fetchData();
+        setExcelFile(null);
       };
       
       reader.readAsArrayBuffer(excelFile);
@@ -189,7 +201,6 @@ const AdminDashboard = () => {
       toast.error("Failed to process Excel file");
     } finally {
       setProcessing(false);
-      setExcelFile(null);
     }
   };
 
@@ -460,15 +471,19 @@ const AdminDashboard = () => {
                       Your Excel file should contain the following columns:
                     </p>
                     <ul className="text-sm text-white/70 space-y-2 list-disc pl-5">
-                      <li>name - Full name of the person</li>
-                      <li>title - Professional title</li>
-                      <li>bio - Biography/description</li>
+                      <li>name - Full name of the person (required)</li>
+                      <li>title - Professional title (required)</li>
+                      <li>bio - Biography/description (required)</li>
                       <li>email - Contact email (optional)</li>
                       <li>twitter - Twitter handle (optional)</li>
                       <li>linkedin - LinkedIn URL (optional)</li>
                       <li>github - GitHub URL (optional)</li>
                     </ul>
-                    <Button variant="outline" className="mt-4 w-full blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30">
+                    <Button 
+                      variant="outline" 
+                      className="mt-4 w-full blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30"
+                      onClick={downloadExcelTemplate}
+                    >
                       <Download className="mr-2 h-4 w-4" />
                       Download Template
                     </Button>

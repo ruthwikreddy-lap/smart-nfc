@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,13 +17,15 @@ const AccessCodeVerification = ({ onVerified }: AccessCodeVerificationProps) => 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { isAdmin } = useAuth();
 
-  // Skip verification for admin user
-  if (isAdmin) {
-    // Auto-verify for admin
-    setTimeout(() => {
+  // Auto-verify for admin user
+  useEffect(() => {
+    if (isAdmin) {
       onVerified();
-    }, 0);
-    
+    }
+  }, [isAdmin, onVerified]);
+
+  // Skip rendering for admin user
+  if (isAdmin) {
     return null;
   }
 
