@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +16,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Admin credentials - keep these secure in a real production app
 const ADMIN_EMAIL = "akkenapally.reddy@gmail.com";
 const ADMIN_PASSWORD = "Akkenapally20!";
 
@@ -70,10 +70,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true);
       
       // Special handling for admin account
-      if (email === ADMIN_EMAIL && password !== ADMIN_PASSWORD) {
-        throw new Error("Incorrect admin password");
+      if (email === ADMIN_EMAIL) {
+        if (password !== ADMIN_PASSWORD) {
+          throw new Error("Invalid admin credentials");
+        }
+        
+        // Proceed with admin login
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        
+        if (error) throw error;
+        navigate("/admin");
+        return;
       }
 
+      // Regular user login
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,14 +13,19 @@ const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   
   // Redirect if already logged in
-  if (user) {
-    navigate("/dashboard");
-    return null;
-  }
+  useEffect(() => {
+    if (user) {
+      if (isAdmin) {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
+    }
+  }, [user, isAdmin, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +65,10 @@ const AuthPage = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (user) {
+    return null; // Don't render anything while redirecting
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-black">
