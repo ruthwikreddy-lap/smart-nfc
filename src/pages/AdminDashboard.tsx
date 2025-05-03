@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { UploadCloud, Users, Key, FileSpreadsheet, Download, Plus } from "lucide-react";
 import { generateAccessCode } from "@/lib/accessCodeUtils";
 import { generateRandomPath } from "@/lib/utils";
-import { UserData, AccessCodeData, PageData } from "@/lib/types";
+import { UserData, AccessCodeData, PageData, ExcelPortfolioData } from "@/lib/types";
 import { downloadExcelTemplate, validateExcelData } from "@/utils/excelUtils";
 import * as XLSX from 'xlsx';
 
@@ -146,7 +146,8 @@ const AdminDashboard = () => {
         let successCount = 0;
         let errorCount = 0;
 
-        for (const row of jsonData) {
+        // Type assertion to ensure TypeScript knows the structure of the data
+        for (const row of jsonData as ExcelPortfolioData[]) {
           const randomPath = generateRandomPath(10);
           
           try {
