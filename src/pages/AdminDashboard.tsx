@@ -38,7 +38,7 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch users data from profiles table instead of users table
+      // IMPORTANT: We're directly querying the profiles table which we have access to
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, email, created_at');
@@ -47,6 +47,8 @@ const AdminDashboard = () => {
         console.error("Error fetching profiles:", profileError);
         throw profileError;
       }
+      
+      console.log("Profile data fetched:", profileData);
       setUsers(profileData as UserData[] || []);
       
       // Fetch pages data
@@ -58,6 +60,8 @@ const AdminDashboard = () => {
         console.error("Error fetching pages:", pageError);
         throw pageError;
       }
+      
+      console.log("Page data fetched:", pageData);
       
       // Enhance page data with user email
       const enhancedPageData = await Promise.all((pageData || []).map(async (page) => {
@@ -88,6 +92,8 @@ const AdminDashboard = () => {
         console.error("Error fetching access codes:", codeError);
         throw codeError;
       }
+      
+      console.log("Access code data fetched:", codeData);
       setAccessCodes(codeData as AccessCodeData[] || []);
       
     } catch (error) {
