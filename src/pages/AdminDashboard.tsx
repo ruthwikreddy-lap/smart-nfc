@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -60,6 +59,7 @@ const AdminDashboard = () => {
   const [generatingCode, setGeneratingCode] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [accessCodesError, setAccessCodesError] = useState(false);
   
   // State for dialogs
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -110,14 +110,16 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch profiles data
+      // Fetch profiles data first
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, email, name, title, created_at');
       
       if (profileError) {
         console.error("Error fetching profiles:", profileError);
-        throw profileError;
+        toast.error("Failed to load user profiles");
+        setLoading(false);
+        return;
       }
       
       console.log("Profile data fetched:", profileData);
@@ -130,7 +132,9 @@ const AdminDashboard = () => {
       
       if (pageError) {
         console.error("Error fetching pages:", pageError);
-        throw pageError;
+        toast.error("Failed to load pages data");
+        setLoading(false);
+        return;
       }
       
       console.log("Page data fetched:", pageData);
@@ -153,31 +157,31 @@ const AdminDashboard = () => {
       }));
       
       setPages(enhancedPageData as PageData[]);
-      
-      try {
-        // Fetch access codes - Handle this separately so other data can still load
-        const { data: codeData, error: codeError } = await supabase
-          .from('access_codes')
-          .select('*')
-          .order('created_at', { ascending: false });
-          
-        if (codeError) {
-          console.error("Error fetching access codes:", codeError);
-          // Don't throw here, we still want other data to be displayed
-          toast.error("Failed to load access codes");
-        } else {
-          console.log("Access code data fetched:", codeData);
-          setAccessCodes(codeData as AccessCodeData[] || []);
-        }
-      } catch (codeError) {
-        console.error("Exception fetching access codes:", codeError);
-      }
-      
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching main data:", error);
       toast.error("Failed to load admin data");
     } finally {
       setLoading(false);
+    }
+    
+    // Fetch access codes separately to avoid blocking the main data loading
+    try {
+      setAccessCodesError(false);
+      const { data: codeData, error: codeError } = await supabase
+        .from('access_codes')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (codeError) {
+        console.error("Error fetching access codes:", codeError);
+        setAccessCodesError(true);
+      } else {
+        console.log("Access code data fetched:", codeData);
+        setAccessCodes(codeData as AccessCodeData[] || []);
+      }
+    } catch (codeError) {
+      console.error("Exception fetching access codes:", codeError);
+      setAccessCodesError(true);
     }
   };
 
@@ -282,6 +286,11 @@ const AdminDashboard = () => {
   };
 
   const generateNewAccessCode = async () => {
+    if (accessCodesError) {
+      toast.error("You don't have permission to manage access codes");
+      return;
+    }
+    
     setGeneratingCode(true);
     try {
       const newCode = generateAccessCode();
@@ -303,6 +312,7 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error("Error generating access code:", error);
       toast.error("Failed to generate access code");
+      setAccessCodesError(true);
     } finally {
       setGeneratingCode(false);
     }
@@ -573,7 +583,9 @@ const AdminDashboard = () => {
               <CardHeader>
                 <CardTitle className="text-2xl font-bold gradient-heading">Access Codes</CardTitle>
                 <CardDescription>
-                  Manage access codes for the platform
+                  {accessCodesError 
+                    ? "You don't have permission to manage access codes" 
+                    : "Manage access codes for the platform"}
                 </CardDescription>
               </CardHeader>
               
@@ -581,42 +593,49 @@ const AdminDashboard = () => {
                 <div className="mb-6">
                   <Button 
                     onClick={generateNewAccessCode} 
-                    disabled={generatingCode}
-                    className="bg-[#007BFF] hover:bg-[#0066cc]"
+                    disabled={generatingCode || accessCodesError}
+                    className={accessCodesError ? "bg-gray-500 cursor-not-allowed" : "bg-[#007BFF] hover:bg-[#0066cc]"}
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     Generate New Access Code
                   </Button>
                 </div>
                 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created At</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {accessCodes.length === 0 ? (
+                {accessCodesError ? (
+                  <div className="text-center p-8 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    <p>You don't have permission to view or manage access codes.</p>
+                    <p className="mt-2 text-sm text-gray-400">Please contact your administrator for assistance.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center">No access codes found</TableCell>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created At</TableHead>
                       </TableRow>
-                    ) : (
-                      accessCodes.map((code) => (
-                        <TableRow key={code.id}>
-                          <TableCell className="font-mono">{code.code}</TableCell>
-                          <TableCell>
-                            <span className={`px-2 py-1 rounded-full text-xs ${code.used ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
-                              {code.used ? 'Used' : 'Available'}
-                            </span>
-                          </TableCell>
-                          <TableCell>{new Date(code.created_at).toLocaleString()}</TableCell>
+                    </TableHeader>
+                    <TableBody>
+                      {accessCodes.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center">No access codes found</TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      ) : (
+                        accessCodes.map((code) => (
+                          <TableRow key={code.id}>
+                            <TableCell className="font-mono">{code.code}</TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-1 rounded-full text-xs ${code.used ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                                {code.used ? 'Used' : 'Available'}
+                              </span>
+                            </TableCell>
+                            <TableCell>{new Date(code.created_at).toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
