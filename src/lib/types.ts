@@ -1,7 +1,10 @@
+
 export interface UserData {
   id: string;
   email: string;
   created_at: string;
+  name?: string;
+  title?: string;
 }
 
 export interface AccessCodeData {
