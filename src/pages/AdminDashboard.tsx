@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -8,12 +9,46 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { UploadCloud, Users, Key, FileSpreadsheet, Download, Plus } from "lucide-react";
+import { UploadCloud, Users, Key, FileSpreadsheet, Download, Plus, Edit, Trash2, Eye } from "lucide-react";
 import { generateAccessCode } from "@/lib/accessCodeUtils";
 import { generateRandomPath } from "@/lib/utils";
 import { UserData, AccessCodeData, PageData, ExcelPortfolioData } from "@/lib/types";
 import { downloadExcelTemplate, validateExcelData } from "@/utils/excelUtils";
 import * as XLSX from 'xlsx';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from "@/components/ui/dialog";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+
+const profileSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  title: z.string().min(1, "Title is required"),
+  bio: z.string().min(1, "Bio is required"),
+  email: z.string().email("Invalid email").nullable().optional(),
+  twitter: z.string().nullable().optional(),
+  linkedin: z.string().nullable().optional(),
+  github: z.string().nullable().optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
 
 const AdminDashboard = () => {
   const { user, isAdmin } = useAuth();
@@ -25,6 +60,28 @@ const AdminDashboard = () => {
   const [generatingCode, setGeneratingCode] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
+  
+  // State for dialogs
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
+  const [currentProfile, setCurrentProfile] = useState<any>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewProfileData, setViewProfileData] = useState<any>(null);
+
+  // Form for editing profile
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: "",
+      title: "",
+      bio: "",
+      email: "",
+      twitter: "",
+      linkedin: "",
+      github: "",
+    }
+  });
 
   useEffect(() => {
     if (!isAdmin && !loading) {
@@ -35,13 +92,28 @@ const AdminDashboard = () => {
     }
   }, [isAdmin, navigate, loading]);
 
+  useEffect(() => {
+    // Reset form with current profile data when editing
+    if (currentProfile && editDialogOpen) {
+      form.reset({
+        name: currentProfile.name || "",
+        title: currentProfile.title || "",
+        bio: currentProfile.bio || "",
+        email: currentProfile.email || "",
+        twitter: currentProfile.twitter || "",
+        linkedin: currentProfile.linkedin || "",
+        github: currentProfile.github || "",
+      });
+    }
+  }, [currentProfile, editDialogOpen, form]);
+
   const fetchData = async () => {
     setLoading(true);
     try {
       // IMPORTANT: We're directly querying the profiles table which we have access to
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('id, email, created_at');
+        .select('id, email, name, title, created_at');
       
       if (profileError) {
         console.error("Error fetching profiles:", profileError);
@@ -102,6 +174,106 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditProfile = async (values: ProfileFormValues) => {
+    if (!currentProfileId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: values.name,
+          title: values.title,
+          bio: values.bio,
+          email: values.email,
+          twitter: values.twitter || null,
+          linkedin: values.linkedin || null,
+          github: values.github || null
+        })
+        .eq('id', currentProfileId);
+        
+      if (error) throw error;
+      
+      toast.success("Profile updated successfully");
+      setEditDialogOpen(false);
+      fetchData(); // Refresh data
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Failed to update profile");
+    }
+  };
+
+  const handleDeleteProfile = async () => {
+    if (!currentProfileId) return;
+    
+    try {
+      // First delete associated page
+      const { error: pageError } = await supabase
+        .from('pages')
+        .delete()
+        .eq('path', currentProfileId);
+        
+      if (pageError) throw pageError;
+      
+      // Then delete the profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', currentProfileId);
+        
+      if (profileError) throw profileError;
+      
+      toast.success("Profile deleted successfully");
+      setDeleteDialogOpen(false);
+      fetchData(); // Refresh data
+    } catch (error) {
+      console.error("Error deleting profile:", error);
+      toast.error("Failed to delete profile");
+    }
+  };
+
+  const viewProfile = async (profileId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', profileId)
+        .single();
+        
+      if (error) throw error;
+      
+      setViewProfileData(data);
+      setViewDialogOpen(true);
+    } catch (error) {
+      console.error("Error fetching profile details:", error);
+      toast.error("Failed to load profile details");
+    }
+  };
+
+  const openEditDialog = async (profileId: string) => {
+    setCurrentProfileId(profileId);
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', profileId)
+        .single();
+        
+      if (error) throw error;
+      
+      setCurrentProfile(data);
+      setEditDialogOpen(true);
+    } catch (error) {
+      console.error("Error fetching profile for editing:", error);
+      toast.error("Failed to load profile data");
+    }
+  };
+
+  const openDeleteDialog = (profileId: string) => {
+    setCurrentProfileId(profileId);
+    setDeleteDialogOpen(true);
   };
 
   const generateNewAccessCode = async () => {
@@ -284,20 +456,53 @@ const AdminDashboard = () => {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>Email</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Title</TableHead>
                       <TableHead>Created At</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {users.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center">No users found</TableCell>
+                        <TableCell colSpan={6} className="text-center">No users found</TableCell>
                       </TableRow>
                     ) : (
                       users.map((user) => (
                         <TableRow key={user.id}>
-                          <TableCell className="font-mono text-xs">{user.id}</TableCell>
+                          <TableCell className="font-mono text-xs truncate max-w-[100px]" title={user.id}>{user.id}</TableCell>
                           <TableCell>{user.email}</TableCell>
+                          <TableCell>{user.name || 'Not set'}</TableCell>
+                          <TableCell>{user.title || 'Not set'}</TableCell>
                           <TableCell>{new Date(user.created_at).toLocaleString()}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => viewProfile(user.id)} 
+                                className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => openEditDialog(user.id)} 
+                                className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => openDeleteDialog(user.id)} 
+                                className="text-red-500 hover:bg-red-500/10 border-red-500/30"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))
                     )}
@@ -509,6 +714,201 @@ const AdminDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* View Profile Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="gradient-heading">Profile Details</DialogTitle>
+            <DialogDescription>
+              Viewing complete profile information
+            </DialogDescription>
+          </DialogHeader>
+          
+          {viewProfileData && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium text-gray-400">Name</h4>
+                <p>{viewProfileData.name || 'Not set'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium text-gray-400">Title</h4>
+                <p>{viewProfileData.title || 'Not set'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium text-gray-400">Bio</h4>
+                <p className="whitespace-pre-line">{viewProfileData.bio || 'Not set'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium text-gray-400">Email</h4>
+                <p>{viewProfileData.email || 'Not set'}</p>
+              </div>
+              
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium text-gray-400">Social Links</h4>
+                <div className="space-y-1">
+                  <p>Twitter: {viewProfileData.twitter || 'Not set'}</p>
+                  <p>LinkedIn: {viewProfileData.linkedin || 'Not set'}</p>
+                  <p>GitHub: {viewProfileData.github || 'Not set'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
+            {currentProfileId && (
+              <Button onClick={() => {
+                setViewDialogOpen(false);
+                openEditDialog(currentProfileId);
+              }} className="bg-[#007BFF] hover:bg-[#0066cc]">
+                Edit Profile
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="gradient-heading">Edit Profile</DialogTitle>
+            <DialogDescription>
+              Make changes to the profile information
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleEditProfile)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Full name" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Professional title" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="bio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bio</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Biography" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Email address" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="twitter"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Twitter</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Twitter handle" {...field} value={field.value || ''} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="linkedin"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>LinkedIn</FormLabel>
+                    <FormControl>
+                      <Input placeholder="LinkedIn URL" {...field} value={field.value || ''} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="github"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>GitHub</FormLabel>
+                    <FormControl>
+                      <Input placeholder="GitHub URL" {...field} value={field.value || ''} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-[#007BFF] hover:bg-[#0066cc]">
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the profile
+              and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteProfile}
+              className="bg-red-500 text-white hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
