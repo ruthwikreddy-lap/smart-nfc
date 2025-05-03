@@ -110,7 +110,7 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // IMPORTANT: We're directly querying the profiles table which we have access to
+      // Fetch profiles data
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, email, name, title, created_at');
@@ -154,19 +154,24 @@ const AdminDashboard = () => {
       
       setPages(enhancedPageData as PageData[]);
       
-      // Fetch access codes
-      const { data: codeData, error: codeError } = await supabase
-        .from('access_codes')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (codeError) {
-        console.error("Error fetching access codes:", codeError);
-        throw codeError;
+      try {
+        // Fetch access codes - Handle this separately so other data can still load
+        const { data: codeData, error: codeError } = await supabase
+          .from('access_codes')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (codeError) {
+          console.error("Error fetching access codes:", codeError);
+          // Don't throw here, we still want other data to be displayed
+          toast.error("Failed to load access codes");
+        } else {
+          console.log("Access code data fetched:", codeData);
+          setAccessCodes(codeData as AccessCodeData[] || []);
+        }
+      } catch (codeError) {
+        console.error("Exception fetching access codes:", codeError);
       }
-      
-      console.log("Access code data fetched:", codeData);
-      setAccessCodes(codeData as AccessCodeData[] || []);
       
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -288,7 +293,10 @@ const AdminDashboard = () => {
           used: false
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error inserting access code:", error);
+        throw error;
+      }
       
       toast.success("New access code generated");
       fetchData();
