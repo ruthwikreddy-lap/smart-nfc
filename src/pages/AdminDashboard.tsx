@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -39,12 +38,15 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch users data from profiles table
+      // Fetch users data from profiles table instead of users table
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, email, created_at');
       
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Error fetching profiles:", profileError);
+        throw profileError;
+      }
       setUsers(profileData as UserData[] || []);
       
       // Fetch pages data
@@ -52,7 +54,10 @@ const AdminDashboard = () => {
         .from('pages')
         .select('*');
       
-      if (pageError) throw pageError;
+      if (pageError) {
+        console.error("Error fetching pages:", pageError);
+        throw pageError;
+      }
       
       // Enhance page data with user email
       const enhancedPageData = await Promise.all((pageData || []).map(async (page) => {
@@ -79,7 +84,10 @@ const AdminDashboard = () => {
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (codeError) throw codeError;
+      if (codeError) {
+        console.error("Error fetching access codes:", codeError);
+        throw codeError;
+      }
       setAccessCodes(codeData as AccessCodeData[] || []);
       
     } catch (error) {
