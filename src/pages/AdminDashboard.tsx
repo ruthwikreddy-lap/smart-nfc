@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -60,6 +61,10 @@ const AdminDashboard = () => {
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
   const [accessCodesError, setAccessCodesError] = useState(false);
+  const [accessCodesErrorMessage, setAccessCodesErrorMessage] = useState<string>('');
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [pagesLoading, setPagesLoading] = useState(true);
+  const [accessCodesLoading, setAccessCodesLoading] = useState(true);
   
   // State for dialogs
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -88,9 +93,16 @@ const AdminDashboard = () => {
       navigate("/dashboard");
       toast.error("You don't have permission to access this page");
     } else if (isAdmin) {
-      fetchData();
+      fetchUsers();
+      fetchPages();
+      fetchAccessCodes();
     }
-  }, [isAdmin, navigate, loading]);
+  }, [isAdmin, navigate]);
+
+  useEffect(() => {
+    // Check all data loading states to determine overall loading state
+    setLoading(usersLoading || pagesLoading);
+  }, [usersLoading, pagesLoading]);
 
   useEffect(() => {
     // Reset form with current profile data when editing
@@ -107,10 +119,9 @@ const AdminDashboard = () => {
     }
   }, [currentProfile, editDialogOpen, form]);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchUsers = async () => {
+    setUsersLoading(true);
     try {
-      // Fetch profiles data first
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, email, name, title, created_at');
@@ -118,13 +129,22 @@ const AdminDashboard = () => {
       if (profileError) {
         console.error("Error fetching profiles:", profileError);
         toast.error("Failed to load user profiles");
-        setLoading(false);
         return;
       }
       
       console.log("Profile data fetched:", profileData);
       setUsers(profileData as UserData[] || []);
-      
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast.error("Failed to load user data");
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  const fetchPages = async () => {
+    setPagesLoading(true);
+    try {
       // Fetch pages data
       const { data: pageData, error: pageError } = await supabase
         .from('pages')
@@ -133,7 +153,6 @@ const AdminDashboard = () => {
       if (pageError) {
         console.error("Error fetching pages:", pageError);
         toast.error("Failed to load pages data");
-        setLoading(false);
         return;
       }
       
@@ -158,15 +177,19 @@ const AdminDashboard = () => {
       
       setPages(enhancedPageData as PageData[]);
     } catch (error) {
-      console.error("Error fetching main data:", error);
-      toast.error("Failed to load admin data");
+      console.error("Error fetching pages:", error);
+      toast.error("Failed to load pages data");
     } finally {
-      setLoading(false);
+      setPagesLoading(false);
     }
-    
-    // Fetch access codes separately to avoid blocking the main data loading
+  };
+  
+  const fetchAccessCodes = async () => {
+    setAccessCodesLoading(true);
     try {
       setAccessCodesError(false);
+      setAccessCodesErrorMessage('');
+      
       const { data: codeData, error: codeError } = await supabase
         .from('access_codes')
         .select('*')
@@ -175,13 +198,17 @@ const AdminDashboard = () => {
       if (codeError) {
         console.error("Error fetching access codes:", codeError);
         setAccessCodesError(true);
+        setAccessCodesErrorMessage(codeError.message || 'Permission denied for access codes');
       } else {
         console.log("Access code data fetched:", codeData);
         setAccessCodes(codeData as AccessCodeData[] || []);
       }
-    } catch (codeError) {
+    } catch (codeError: any) {
       console.error("Exception fetching access codes:", codeError);
       setAccessCodesError(true);
+      setAccessCodesErrorMessage(codeError.message || 'Unknown error fetching access codes');
+    } finally {
+      setAccessCodesLoading(false);
     }
   };
 
@@ -206,7 +233,7 @@ const AdminDashboard = () => {
       
       toast.success("Profile updated successfully");
       setEditDialogOpen(false);
-      fetchData(); // Refresh data
+      fetchUsers(); // Refresh data
     } catch (error) {
       console.error("Error updating profile:", error);
       toast.error("Failed to update profile");
@@ -235,7 +262,8 @@ const AdminDashboard = () => {
       
       toast.success("Profile deleted successfully");
       setDeleteDialogOpen(false);
-      fetchData(); // Refresh data
+      fetchUsers(); // Refresh users data
+      fetchPages(); // Refresh pages data
     } catch (error) {
       console.error("Error deleting profile:", error);
       toast.error("Failed to delete profile");
@@ -308,7 +336,7 @@ const AdminDashboard = () => {
       }
       
       toast.success("New access code generated");
-      fetchData();
+      fetchAccessCodes();
     } catch (error) {
       console.error("Error generating access code:", error);
       toast.error("Failed to generate access code");
@@ -396,7 +424,8 @@ const AdminDashboard = () => {
           toast.error(`Failed to create ${errorCount} portfolios`);
         }
         
-        fetchData();
+        fetchUsers();
+        fetchPages();
         setExcelFile(null);
       };
       
@@ -433,7 +462,15 @@ const AdminDashboard = () => {
             <Button variant="outline" onClick={() => navigate("/dashboard")} className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30">
               Regular Dashboard
             </Button>
-            <Button variant="outline" onClick={() => fetchData()} className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                fetchUsers();
+                fetchPages();
+                fetchAccessCodes();
+              }} 
+              className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30"
+            >
               Refresh Data
             </Button>
           </div>
@@ -469,63 +506,69 @@ const AdminDashboard = () => {
               </CardHeader>
               
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Created At</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.length === 0 ? (
+                {usersLoading ? (
+                  <div className="flex justify-center p-8">
+                    <div className="w-8 h-8 rounded-full border-2 border-[#007BFF] border-t-transparent animate-spin"></div>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">No users found</TableCell>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Created At</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ) : (
-                      users.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell className="font-mono text-xs truncate max-w-[100px]" title={user.id}>{user.id}</TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>{user.name || 'Not set'}</TableCell>
-                          <TableCell>{user.title || 'Not set'}</TableCell>
-                          <TableCell>{new Date(user.created_at).toLocaleString()}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => viewProfile(user.id)} 
-                                className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => openEditDialog(user.id)} 
-                                className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => openDeleteDialog(user.id)} 
-                                className="text-red-500 hover:bg-red-500/10 border-red-500/30"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
+                    </TableHeader>
+                    <TableBody>
+                      {users.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center">No users found</TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      ) : (
+                        users.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-mono text-xs truncate max-w-[100px]" title={user.id}>{user.id}</TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>{user.name || 'Not set'}</TableCell>
+                            <TableCell>{user.title || 'Not set'}</TableCell>
+                            <TableCell>{new Date(user.created_at).toLocaleString()}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => viewProfile(user.id)} 
+                                  className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => openEditDialog(user.id)} 
+                                  className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => openDeleteDialog(user.id)} 
+                                  className="text-red-500 hover:bg-red-500/10 border-red-500/30"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -540,40 +583,46 @@ const AdminDashboard = () => {
               </CardHeader>
               
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Path</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Created At</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pages.length === 0 ? (
+                {pagesLoading ? (
+                  <div className="flex justify-center p-8">
+                    <div className="w-8 h-8 rounded-full border-2 border-[#007BFF] border-t-transparent animate-spin"></div>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center">No pages found</TableCell>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Path</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Created At</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ) : (
-                      pages.map((page) => (
-                        <TableRow key={page.id}>
-                          <TableCell className="font-mono text-xs">{page.id}</TableCell>
-                          <TableCell>{page.path}</TableCell>
-                          <TableCell>{page.user_email || 'Unknown'}</TableCell>
-                          <TableCell>{new Date(page.created_at).toLocaleString()}</TableCell>
-                          <TableCell>
-                            <Button variant="outline" size="sm" asChild className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30">
-                              <a href={`/${page.path}`} target="_blank" rel="noopener noreferrer">
-                                View
-                              </a>
-                            </Button>
-                          </TableCell>
+                    </TableHeader>
+                    <TableBody>
+                      {pages.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center">No pages found</TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      ) : (
+                        pages.map((page) => (
+                          <TableRow key={page.id}>
+                            <TableCell className="font-mono text-xs">{page.id}</TableCell>
+                            <TableCell>{page.path}</TableCell>
+                            <TableCell>{page.user_email || 'Unknown'}</TableCell>
+                            <TableCell>{new Date(page.created_at).toLocaleString()}</TableCell>
+                            <TableCell>
+                              <Button variant="outline" size="sm" asChild className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30">
+                                <a href={`/${page.path}`} target="_blank" rel="noopener noreferrer">
+                                  View
+                                </a>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -601,10 +650,15 @@ const AdminDashboard = () => {
                   </Button>
                 </div>
                 
-                {accessCodesError ? (
+                {accessCodesLoading ? (
+                  <div className="flex justify-center p-8">
+                    <div className="w-8 h-8 rounded-full border-2 border-[#007BFF] border-t-transparent animate-spin"></div>
+                  </div>
+                ) : accessCodesError ? (
                   <div className="text-center p-8 bg-red-500/10 border border-red-500/20 rounded-lg">
                     <p>You don't have permission to view or manage access codes.</p>
-                    <p className="mt-2 text-sm text-gray-400">Please contact your administrator for assistance.</p>
+                    <p className="mt-2 text-sm text-gray-400">Error: {accessCodesErrorMessage}</p>
+                    <p className="mt-2 text-sm text-gray-400">Please contact your database administrator for assistance.</p>
                   </div>
                 ) : (
                   <Table>

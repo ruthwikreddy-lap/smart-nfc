@@ -1,10 +1,10 @@
 
 export interface UserData {
   id: string;
-  email: string;
+  email: string | null;
   created_at: string;
-  name?: string;
-  title?: string;
+  name?: string | null;
+  title?: string | null;
 }
 
 export interface AccessCodeData {
