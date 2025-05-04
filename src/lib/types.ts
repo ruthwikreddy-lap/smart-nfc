@@ -5,6 +5,10 @@ export interface UserData {
   created_at: string;
   name?: string | null;
   title?: string | null;
+  bio?: string | null;
+  twitter?: string | null;
+  linkedin?: string | null;
+  github?: string | null;
 }
 
 export interface AccessCodeData {
