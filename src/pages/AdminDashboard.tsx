@@ -187,9 +187,11 @@ const AdminDashboard = () => {
   const fetchAccessCodes = async () => {
     setAccessCodesLoading(true);
     try {
+      // Reset any previous error state
       setAccessCodesError(false);
       setAccessCodesErrorMessage('');
       
+      // Try to fetch access codes
       const { data: codeData, error: codeError } = await supabase
         .from('access_codes')
         .select('*')
@@ -198,15 +200,17 @@ const AdminDashboard = () => {
       if (codeError) {
         console.error("Error fetching access codes:", codeError);
         setAccessCodesError(true);
-        setAccessCodesErrorMessage(codeError.message || 'Permission denied for access codes');
+        setAccessCodesErrorMessage(codeError.message || 'Error fetching access codes');
+        setAccessCodes([]); // Set empty array so UI can still render properly
       } else {
         console.log("Access code data fetched:", codeData);
         setAccessCodes(codeData as AccessCodeData[] || []);
       }
-    } catch (codeError: any) {
-      console.error("Exception fetching access codes:", codeError);
+    } catch (error: any) {
+      console.error("Exception fetching access codes:", error);
       setAccessCodesError(true);
-      setAccessCodesErrorMessage(codeError.message || 'Unknown error fetching access codes');
+      setAccessCodesErrorMessage(error.message || 'Unknown error fetching access codes');
+      setAccessCodes([]); // Set empty array so UI can still render properly
     } finally {
       setAccessCodesLoading(false);
     }
@@ -314,6 +318,7 @@ const AdminDashboard = () => {
   };
 
   const generateNewAccessCode = async () => {
+    // Don't attempt to generate a code if we already know there's a permission issue
     if (accessCodesError) {
       toast.error("You don't have permission to manage access codes");
       return;
@@ -332,15 +337,19 @@ const AdminDashboard = () => {
       
       if (error) {
         console.error("Error inserting access code:", error);
-        throw error;
+        setAccessCodesError(true);
+        setAccessCodesErrorMessage(error.message);
+        toast.error("Failed to generate access code: " + error.message);
+        return;
       }
       
       toast.success("New access code generated");
       fetchAccessCodes();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating access code:", error);
       toast.error("Failed to generate access code");
       setAccessCodesError(true);
+      setAccessCodesErrorMessage(error.message || "Unknown error");
     } finally {
       setGeneratingCode(false);
     }
@@ -633,7 +642,7 @@ const AdminDashboard = () => {
                 <CardTitle className="text-2xl font-bold gradient-heading">Access Codes</CardTitle>
                 <CardDescription>
                   {accessCodesError 
-                    ? "You don't have permission to manage access codes" 
+                    ? "There was an error loading access codes" 
                     : "Manage access codes for the platform"}
                 </CardDescription>
               </CardHeader>
@@ -656,9 +665,9 @@ const AdminDashboard = () => {
                   </div>
                 ) : accessCodesError ? (
                   <div className="text-center p-8 bg-red-500/10 border border-red-500/20 rounded-lg">
-                    <p>You don't have permission to view or manage access codes.</p>
+                    <p>There was an error loading access codes</p>
                     <p className="mt-2 text-sm text-gray-400">Error: {accessCodesErrorMessage}</p>
-                    <p className="mt-2 text-sm text-gray-400">Please contact your database administrator for assistance.</p>
+                    <p className="mt-4">Please try refreshing the page or contact your administrator for assistance.</p>
                   </div>
                 ) : (
                   <Table>
@@ -995,3 +1004,4 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
