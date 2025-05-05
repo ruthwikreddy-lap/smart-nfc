@@ -9,10 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { UploadCloud, Users, Key, FileSpreadsheet, Download, Plus, Edit, Trash2, Eye } from "lucide-react";
-import { generateAccessCode } from "@/lib/accessCodeUtils";
+import { UploadCloud, Users, FileSpreadsheet, Download, Plus, Edit, Trash2, Eye } from "lucide-react";
 import { generateRandomPath } from "@/lib/utils";
-import { UserData, AccessCodeData, PageData, ExcelPortfolioData } from "@/lib/types";
+import { UserData, PageData, ExcelPortfolioData } from "@/lib/types";
 import { downloadExcelTemplate, validateExcelData } from "@/utils/excelUtils";
 import * as XLSX from 'xlsx';
 import { 
@@ -55,16 +54,11 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserData[]>([]);
   const [pages, setPages] = useState<PageData[]>([]);
-  const [accessCodes, setAccessCodes] = useState<AccessCodeData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [generatingCode, setGeneratingCode] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [accessCodesError, setAccessCodesError] = useState(false);
-  const [accessCodesErrorMessage, setAccessCodesErrorMessage] = useState<string>('');
   const [usersLoading, setUsersLoading] = useState(true);
   const [pagesLoading, setPagesLoading] = useState(true);
-  const [accessCodesLoading, setAccessCodesLoading] = useState(true);
   
   // State for dialogs
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -95,7 +89,6 @@ const AdminDashboard = () => {
     } else if (isAdmin) {
       fetchUsers();
       fetchPages();
-      fetchAccessCodes();
     }
   }, [isAdmin, navigate]);
 
@@ -181,38 +174,6 @@ const AdminDashboard = () => {
       toast.error("Failed to load pages data");
     } finally {
       setPagesLoading(false);
-    }
-  };
-  
-  const fetchAccessCodes = async () => {
-    setAccessCodesLoading(true);
-    try {
-      // Reset any previous error state
-      setAccessCodesError(false);
-      setAccessCodesErrorMessage('');
-      
-      // Try to fetch access codes
-      const { data: codeData, error: codeError } = await supabase
-        .from('access_codes')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (codeError) {
-        console.error("Error fetching access codes:", codeError);
-        setAccessCodesError(true);
-        setAccessCodesErrorMessage(codeError.message || 'Error fetching access codes');
-        setAccessCodes([]); // Set empty array so UI can still render properly
-      } else {
-        console.log("Access code data fetched:", codeData);
-        setAccessCodes(codeData as AccessCodeData[] || []);
-      }
-    } catch (error: any) {
-      console.error("Exception fetching access codes:", error);
-      setAccessCodesError(true);
-      setAccessCodesErrorMessage(error.message || 'Unknown error fetching access codes');
-      setAccessCodes([]); // Set empty array so UI can still render properly
-    } finally {
-      setAccessCodesLoading(false);
     }
   };
 
@@ -315,44 +276,6 @@ const AdminDashboard = () => {
   const openDeleteDialog = (profileId: string) => {
     setCurrentProfileId(profileId);
     setDeleteDialogOpen(true);
-  };
-
-  const generateNewAccessCode = async () => {
-    // Don't attempt to generate a code if we already know there's a permission issue
-    if (accessCodesError) {
-      toast.error("You don't have permission to manage access codes");
-      return;
-    }
-    
-    setGeneratingCode(true);
-    try {
-      const newCode = generateAccessCode();
-      
-      const { error } = await supabase
-        .from('access_codes')
-        .insert({
-          code: newCode,
-          used: false
-        });
-      
-      if (error) {
-        console.error("Error inserting access code:", error);
-        setAccessCodesError(true);
-        setAccessCodesErrorMessage(error.message);
-        toast.error("Failed to generate access code: " + error.message);
-        return;
-      }
-      
-      toast.success("New access code generated");
-      fetchAccessCodes();
-    } catch (error: any) {
-      console.error("Error generating access code:", error);
-      toast.error("Failed to generate access code");
-      setAccessCodesError(true);
-      setAccessCodesErrorMessage(error.message || "Unknown error");
-    } finally {
-      setGeneratingCode(false);
-    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -476,7 +399,6 @@ const AdminDashboard = () => {
               onClick={() => {
                 fetchUsers();
                 fetchPages();
-                fetchAccessCodes();
               }} 
               className="blue-glow hover:bg-[#007BFF]/10 border-[#007BFF]/30"
             >
@@ -486,18 +408,14 @@ const AdminDashboard = () => {
         </div>
         
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid grid-cols-4 mb-8">
+          <TabsList className="grid grid-cols-3 mb-8">
             <TabsTrigger value="users" className="data-[state=active]:bg-[#007BFF] data-[state=active]:text-white">
               <Users className="mr-2 h-4 w-4" />
               Users
             </TabsTrigger>
             <TabsTrigger value="pages" className="data-[state=active]:bg-[#007BFF] data-[state=active]:text-white">
-              <Key className="mr-2 h-4 w-4" />
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
               Portfolio Pages
-            </TabsTrigger>
-            <TabsTrigger value="codes" className="data-[state=active]:bg-[#007BFF] data-[state=active]:text-white">
-              <Key className="mr-2 h-4 w-4" />
-              Access Codes
             </TabsTrigger>
             <TabsTrigger value="bulk" className="data-[state=active]:bg-[#007BFF] data-[state=active]:text-white">
               <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -626,73 +544,6 @@ const AdminDashboard = () => {
                                 </a>
                               </Button>
                             </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="codes" className="animate-fade-in">
-            <Card className="border-[#007BFF]/20 bg-black/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold gradient-heading">Access Codes</CardTitle>
-                <CardDescription>
-                  {accessCodesError 
-                    ? "There was an error loading access codes" 
-                    : "Manage access codes for the platform"}
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent>
-                <div className="mb-6">
-                  <Button 
-                    onClick={generateNewAccessCode} 
-                    disabled={generatingCode || accessCodesError}
-                    className={accessCodesError ? "bg-gray-500 cursor-not-allowed" : "bg-[#007BFF] hover:bg-[#0066cc]"}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Generate New Access Code
-                  </Button>
-                </div>
-                
-                {accessCodesLoading ? (
-                  <div className="flex justify-center p-8">
-                    <div className="w-8 h-8 rounded-full border-2 border-[#007BFF] border-t-transparent animate-spin"></div>
-                  </div>
-                ) : accessCodesError ? (
-                  <div className="text-center p-8 bg-red-500/10 border border-red-500/20 rounded-lg">
-                    <p>There was an error loading access codes</p>
-                    <p className="mt-2 text-sm text-gray-400">Error: {accessCodesErrorMessage}</p>
-                    <p className="mt-4">Please try refreshing the page or contact your administrator for assistance.</p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Code</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Created At</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {accessCodes.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={3} className="text-center">No access codes found</TableCell>
-                        </TableRow>
-                      ) : (
-                        accessCodes.map((code) => (
-                          <TableRow key={code.id}>
-                            <TableCell className="font-mono">{code.code}</TableCell>
-                            <TableCell>
-                              <span className={`px-2 py-1 rounded-full text-xs ${code.used ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
-                                {code.used ? 'Used' : 'Available'}
-                              </span>
-                            </TableCell>
-                            <TableCell>{new Date(code.created_at).toLocaleString()}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -1004,4 +855,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-

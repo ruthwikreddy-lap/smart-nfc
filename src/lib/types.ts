@@ -11,13 +11,6 @@ export interface UserData {
   github?: string | null;
 }
 
-export interface AccessCodeData {
-  id: string;
-  code: string;
-  used: boolean;
-  created_at: string;
-}
-
 export interface PageData {
   id: string;
   path: string;
