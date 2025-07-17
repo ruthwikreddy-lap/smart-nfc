@@ -7,12 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { User, Heart, Briefcase } from "lucide-react";
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [accountType, setAccountType] = useState<"professional" | "emergency">("professional");
   const { signIn, signUp, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   
@@ -45,21 +47,24 @@ const AuthPage = () => {
     }
   };
 
-  const handleTestLogin = async () => {
+  const handleTestLogin = async (type: "professional" | "emergency") => {
     setIsSubmitting(true);
+    const testEmail = type === "professional" ? "test-professional@gmail.com" : "test-emergency@gmail.com";
+    const testPassword = "test123";
+    
     try {
-      await signIn("test@gmail.com", "test123");
+      await signIn(testEmail, testPassword);
     } catch (error) {
       console.error("Test login error:", error);
-      toast.error("Failed to log in with test account. Creating a test account first.");
+      toast.error(`Failed to log in with test ${type} account. Creating account first.`);
       
       // Try to create the test account if it doesn't exist
       try {
-        await signUp("test@gmail.com", "test123");
-        toast.success("Test account created. Please try logging in now.");
+        await signUp(testEmail, testPassword);
+        toast.success(`Test ${type} account created. Please try logging in now.`);
       } catch (signupError) {
         console.error("Test signup error:", signupError);
-        toast.error("Failed to create test account.");
+        toast.error(`Failed to create test ${type} account.`);
       }
     } finally {
       setIsSubmitting(false);
@@ -93,6 +98,61 @@ const AuthPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {!isLogin && (
+            <div className="space-y-4 mb-6">
+              <Label className="text-base font-semibold">Account Type</Label>
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setAccountType("professional")}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${
+                    accountType === "professional"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
+                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-full ${
+                      accountType === "professional" ? "bg-blue-500 text-white" : "bg-gray-100 dark:bg-gray-800"
+                    }`}>
+                      <Briefcase className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="font-semibold">Professional</div>
+                      <div className="text-sm text-muted-foreground">
+                        Create a professional profile page with your bio, links, and portfolio
+                      </div>
+                    </div>
+                  </div>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setAccountType("emergency")}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${
+                    accountType === "emergency"
+                      ? "border-red-500 bg-red-50 dark:bg-red-950/20"
+                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-full ${
+                      accountType === "emergency" ? "bg-red-500 text-white" : "bg-gray-100 dark:bg-gray-800"
+                    }`}>
+                      <Heart className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="font-semibold">Emergency</div>
+                      <div className="text-sm text-muted-foreground">
+                        Create emergency health cards with medical information for quick access
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -137,15 +197,31 @@ const AuthPage = () => {
             </div>
             
             <div className="border-t pt-4 mt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full" 
-                onClick={handleTestLogin}
-                disabled={isSubmitting}
-              >
-                Use Test Account (test@gmail.com)
-              </Button>
+              <div className="text-sm text-muted-foreground mb-3 text-center">Test Accounts (for development)</div>
+              <div className="grid grid-cols-1 gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  className="w-full" 
+                  onClick={() => handleTestLogin("professional")}
+                  disabled={isSubmitting}
+                >
+                  <Briefcase className="h-4 w-4 mr-2" />
+                  Test Professional Account
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  className="w-full" 
+                  onClick={() => handleTestLogin("emergency")}
+                  disabled={isSubmitting}
+                >
+                  <Heart className="h-4 w-4 mr-2" />
+                  Test Emergency Account
+                </Button>
+              </div>
             </div>
           </form>
         </CardContent>
