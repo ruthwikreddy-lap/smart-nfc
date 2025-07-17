@@ -2,7 +2,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { ArrowRight, User, Sparkles, Palette } from "lucide-react";
+import { ArrowRight, User, Sparkles, Palette, Heart } from "lucide-react";
 
 const Index = () => {
   const { user } = useAuth();
@@ -50,6 +50,24 @@ const Index = () => {
               <p className="text-white/50 text-sm">No credit card required. Create your page in minutes.</p>
             </div>
           )}
+        </div>
+        
+        {/* Emergency Card Section */}
+        <div className="text-center mb-12 p-8 rounded-xl border border-red-600/20 bg-red-600/5 backdrop-blur-sm">
+          <div className="inline-block p-3 mb-4 rounded-full bg-red-600/20">
+            <Heart className="h-8 w-8 text-red-600" />
+          </div>
+          <h2 className="text-3xl font-bold mb-4 text-red-600">Emergency Health Card</h2>
+          <p className="text-white/70 max-w-2xl mx-auto mb-6">
+            Create a digital emergency health card with your medical information for quick access during emergencies
+          </p>
+          <Button asChild size="lg" className="group px-8 py-6 bg-red-600 hover:bg-red-700 text-white">
+            <Link to="/emergency-card" className="flex items-center">
+              <Heart className="mr-2 h-5 w-5" />
+              Create Emergency Card
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </Button>
         </div>
         
         {/* Feature highlights */}

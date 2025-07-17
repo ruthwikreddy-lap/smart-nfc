@@ -14,6 +14,8 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ThemeProvider } from "./context/ThemeContext";
+import EmergencyCardForm from "./components/EmergencyCardForm";
+import EmergencyCard from "./pages/EmergencyCard";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +30,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/emergency-card" element={<EmergencyCardForm />} />
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />
@@ -40,6 +43,7 @@ const App = () => (
               } />
               <Route path="/success/:path" element={<Success />} />
               <Route path="/not-found" element={<NotFound />} />
+              <Route path="/card/:path" element={<EmergencyCard />} />
               <Route path="/:path" element={<UserPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
