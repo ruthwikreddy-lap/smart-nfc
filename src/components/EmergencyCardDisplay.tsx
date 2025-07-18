@@ -19,6 +19,7 @@ interface EmergencyCardData {
 
 interface EmergencyCardDisplayProps {
   data: EmergencyCardData;
+  isOnline?: boolean;
 }
 
 export default function EmergencyCardDisplay({ data }: EmergencyCardDisplayProps) {

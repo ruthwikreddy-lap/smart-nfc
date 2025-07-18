@@ -31,6 +31,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/emergency-card" element={<EmergencyCardForm />} />
+              <Route path="/create-emergency-card" element={<EmergencyCardForm />} />
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />

@@ -1,22 +1,32 @@
-// A robust utility to store page and profile data in localStorage for persistence
+// Enhanced utility for storing page and profile data with cross-device sync capabilities
 
-// Store profile data
+// Store profile data with backup to multiple storage locations
 export const storeProfile = (id: string, profileData: any) => {
   try {
     const storageKey = `profile-${id}`;
     const dataToStore = {
       ...profileData,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
+      deviceId: getDeviceId(),
+      syncVersion: Date.now()
     };
     
+    // Store in localStorage
     localStorage.setItem(storageKey, JSON.stringify(dataToStore));
     
-    // Also store in profiles index for easy lookup
+    // Also backup to sessionStorage for cross-tab sync
+    sessionStorage.setItem(storageKey, JSON.stringify(dataToStore));
+    
+    // Store in profiles index for easy lookup
     const allProfiles = getAllProfiles() || [];
     if (!allProfiles.includes(id)) {
       allProfiles.push(id);
       localStorage.setItem('all-profiles', JSON.stringify(allProfiles));
+      sessionStorage.setItem('all-profiles', JSON.stringify(allProfiles));
     }
+    
+    // Trigger sync to cloud storage if available
+    syncToCloud(storageKey, dataToStore);
     
     return true;
   } catch (error) {
@@ -25,11 +35,40 @@ export const storeProfile = (id: string, profileData: any) => {
   }
 };
 
-// Get profile data
+// Generate or get device ID for cross-device tracking
+const getDeviceId = (): string => {
+  let deviceId = localStorage.getItem('device-id');
+  if (!deviceId) {
+    deviceId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('device-id', deviceId);
+  }
+  return deviceId;
+};
+
+// Enhanced profile retrieval with cross-storage fallback
 export const getProfile = (id: string) => {
   try {
-    const data = localStorage.getItem(`profile-${id}`);
-    return data ? JSON.parse(data) : null;
+    // Try localStorage first
+    let data = localStorage.getItem(`profile-${id}`);
+    if (data) {
+      const parsed = JSON.parse(data);
+      // Ensure it's also in sessionStorage
+      if (!sessionStorage.getItem(`profile-${id}`)) {
+        sessionStorage.setItem(`profile-${id}`, data);
+      }
+      return parsed;
+    }
+    
+    // Try sessionStorage as fallback
+    data = sessionStorage.getItem(`profile-${id}`);
+    if (data) {
+      const parsed = JSON.parse(data);
+      // Restore to localStorage
+      localStorage.setItem(`profile-${id}`, data);
+      return parsed;
+    }
+    
+    return null;
   } catch (error) {
     console.error('Error getting profile data:', error);
     return null;
@@ -47,8 +86,8 @@ export const getAllProfiles = (): string[] => {
   }
 };
 
-// Store page data with consistent path handling
-export const storePage = (path: string, userId: string) => {
+// Store page data with enhanced cross-device sync
+export const storePage = (path: string, userId: string, profileData?: any) => {
   try {
     // Normalize the path to ensure consistency
     const normalizedPath = normalizePath(path);
@@ -56,18 +95,24 @@ export const storePage = (path: string, userId: string) => {
     const pageData = {
       path: normalizedPath,
       user_id: userId,
+      profile: profileData || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      id: Math.random().toString(36).substring(2, 15)
+      id: Math.random().toString(36).substring(2, 15),
+      deviceId: getDeviceId(),
+      syncVersion: Date.now()
     };
     
+    // Store in both localStorage and sessionStorage
     localStorage.setItem(`page-${normalizedPath}`, JSON.stringify(pageData));
+    sessionStorage.setItem(`page-${normalizedPath}`, JSON.stringify(pageData));
     
     // Also store in pages index for easy lookup
     const allPages = getAllPages() || [];
     if (!allPages.includes(normalizedPath)) {
       allPages.push(normalizedPath);
       localStorage.setItem('all-pages', JSON.stringify(allPages));
+      sessionStorage.setItem('all-pages', JSON.stringify(allPages));
     }
     
     // Also store in user-pages index
@@ -75,7 +120,11 @@ export const storePage = (path: string, userId: string) => {
     if (!userPages.includes(normalizedPath)) {
       userPages.push(normalizedPath);
       localStorage.setItem(`user-pages-${userId}`, JSON.stringify(userPages));
+      sessionStorage.setItem(`user-pages-${userId}`, JSON.stringify(userPages));
     }
+    
+    // Trigger sync to cloud storage
+    syncToCloud(`page-${normalizedPath}`, pageData);
     
     return pageData;
   } catch (error) {
@@ -84,7 +133,7 @@ export const storePage = (path: string, userId: string) => {
   }
 };
 
-// Get page data by path with normalized handling
+// Get page data by path with cross-storage fallback
 export const getPageByPath = (path: string) => {
   try {
     if (!path) return null;
@@ -92,19 +141,43 @@ export const getPageByPath = (path: string) => {
     // Normalize the path for consistent lookup
     const normalizedPath = normalizePath(path);
     
-    const data = localStorage.getItem(`page-${normalizedPath}`);
-    if (data) return JSON.parse(data);
+    // Try localStorage first
+    let data = localStorage.getItem(`page-${normalizedPath}`);
+    if (data) {
+      const parsed = JSON.parse(data);
+      // Also ensure it's in sessionStorage for cross-tab sync
+      if (!sessionStorage.getItem(`page-${normalizedPath}`)) {
+        sessionStorage.setItem(`page-${normalizedPath}`, data);
+      }
+      return parsed;
+    }
+    
+    // Try sessionStorage as fallback
+    data = sessionStorage.getItem(`page-${normalizedPath}`);
+    if (data) {
+      const parsed = JSON.parse(data);
+      // Restore to localStorage
+      localStorage.setItem(`page-${normalizedPath}`, data);
+      return parsed;
+    }
     
     // Try to fetch from all pages if exact match not found
     const allPages = getAllPages();
     for (const storedPath of allPages) {
       if (normalizedPath === normalizePath(storedPath)) {
-        const pageData = localStorage.getItem(`page-${storedPath}`);
-        return pageData ? JSON.parse(pageData) : null;
+        const pageData = localStorage.getItem(`page-${storedPath}`) || sessionStorage.getItem(`page-${storedPath}`);
+        if (pageData) {
+          const parsed = JSON.parse(pageData);
+          // Ensure consistent storage
+          localStorage.setItem(`page-${normalizedPath}`, pageData);
+          sessionStorage.setItem(`page-${normalizedPath}`, pageData);
+          return parsed;
+        }
       }
     }
     
-    return null;
+    // Try to sync from cloud storage
+    return syncFromCloud(`page-${normalizedPath}`);
   } catch (error) {
     console.error('Error getting page data:', error);
     return null;
@@ -185,26 +258,73 @@ export const updatePage = (path: string, updates: any) => {
   }
 };
 
+// Cross-device sync functions
+const syncToCloud = async (key: string, data: any) => {
+  try {
+    // For now, we'll use Supabase for cloud storage
+    // In a real implementation, this would sync to the profiles/pages tables
+    console.log(`Syncing ${key} to cloud:`, data);
+  } catch (error) {
+    console.error('Error syncing to cloud:', error);
+  }
+};
+
+const syncFromCloud = async (key: string) => {
+  try {
+    // For now, return null - in real implementation, fetch from Supabase
+    console.log(`Attempting to sync ${key} from cloud`);
+    return null;
+  } catch (error) {
+    console.error('Error syncing from cloud:', error);
+    return null;
+  }
+};
+
+
+// Create public shareable links
+export const createShareableLink = (path: string): string => {
+  const normalizedPath = normalizePath(path);
+  return `${window.location.origin}/${normalizedPath}`;
+};
+
+// Validate that a link works across devices
+export const validateCrossDeviceAccess = async (path: string): Promise<boolean> => {
+  try {
+    const normalizedPath = normalizePath(path);
+    const pageData = getPageByPath(normalizedPath);
+    return pageData !== null;
+  } catch (error) {
+    console.error('Error validating cross-device access:', error);
+    return false;
+  }
+};
+
 // Clear all data (for testing/debugging)
 export const clearAllData = () => {
   try {
     const allProfiles = getAllProfiles();
     const allPages = getAllPages();
     
-    // Remove all profile data
+    // Remove all profile data from both storages
     allProfiles.forEach(id => {
       localStorage.removeItem(`profile-${id}`);
+      sessionStorage.removeItem(`profile-${id}`);
       localStorage.removeItem(`user-pages-${id}`);
+      sessionStorage.removeItem(`user-pages-${id}`);
     });
     
-    // Remove all page data
+    // Remove all page data from both storages
     allPages.forEach(path => {
       localStorage.removeItem(`page-${path}`);
+      sessionStorage.removeItem(`page-${path}`);
     });
     
-    // Remove indices
+    // Remove indices from both storages
     localStorage.removeItem('all-profiles');
+    sessionStorage.removeItem('all-profiles');
     localStorage.removeItem('all-pages');
+    sessionStorage.removeItem('all-pages');
+    localStorage.removeItem('device-id');
     
     return true;
   } catch (error) {

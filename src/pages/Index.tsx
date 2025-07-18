@@ -61,8 +61,8 @@ const Index = () => {
           <p className="text-white/70 max-w-2xl mx-auto mb-6">
             Create a digital emergency health card with your medical information for quick access during emergencies
           </p>
-          <Button asChild size="lg" className="group px-8 py-6 bg-red-600 hover:bg-red-700 text-white">
-            <Link to="/emergency-card" className="flex items-center">
+          <Button asChild size="lg" className="group px-8 py-6 bg-red-600 hover:bg-red-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300">
+            <Link to="/create-emergency-card" className="flex items-center">
               <Heart className="mr-2 h-5 w-5" />
               Create Emergency Card
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
