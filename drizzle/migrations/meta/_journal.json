@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1794590245171,
+      "tag": "0000_restore_profile_page_emergency_tables",
+      "breakpoints": true
+    }
+  ]
+}
