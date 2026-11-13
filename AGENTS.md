@@ -1,0 +1,1 @@
+- Keep the existing React/Vite app and route structure; shared dashboard navigation belongs in reusable layout components so authenticated pages remain consistent.
