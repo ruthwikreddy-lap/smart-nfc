@@ -14,7 +14,120 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      emergency_cards: {
+        Row: {
+          allergies: string
+          blood_type: string
+          created_at: string
+          current_medication: string
+          emergency_number: string
+          family_doctor: string
+          full_name: string
+          id: string
+          id_code: string
+          insurance_status: string
+          path: string
+          preferred_hospitals: string
+          validity_status: string
+        }
+        Insert: {
+          allergies: string
+          blood_type: string
+          created_at?: string
+          current_medication: string
+          emergency_number: string
+          family_doctor: string
+          full_name: string
+          id?: string
+          id_code: string
+          insurance_status: string
+          path: string
+          preferred_hospitals: string
+          validity_status: string
+        }
+        Update: {
+          allergies?: string
+          blood_type?: string
+          created_at?: string
+          current_medication?: string
+          emergency_number?: string
+          family_doctor?: string
+          full_name?: string
+          id?: string
+          id_code?: string
+          insurance_status?: string
+          path?: string
+          preferred_hospitals?: string
+          validity_status?: string
+        }
+        Relationships: []
+      }
+      pages: {
+        Row: {
+          created_at: string
+          id: string
+          path: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          path: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          path?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar: string | null
+          bio: string
+          created_at: string
+          email: string | null
+          github: string | null
+          id: string
+          linkedin: string | null
+          name: string
+          preferred_theme: string
+          title: string
+          twitter: string | null
+        }
+        Insert: {
+          avatar?: string | null
+          bio?: string
+          created_at?: string
+          email?: string | null
+          github?: string | null
+          id: string
+          linkedin?: string | null
+          name?: string
+          preferred_theme?: string
+          title?: string
+          twitter?: string | null
+        }
+        Update: {
+          avatar?: string | null
+          bio?: string
+          created_at?: string
+          email?: string | null
+          github?: string | null
+          id?: string
+          linkedin?: string | null
+          name?: string
+          preferred_theme?: string
+          title?: string
+          twitter?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
